@@ -1677,6 +1677,68 @@ footer {
   font-size: 15px;
   line-height: 1.7;
 }
+
+/* ========== CURRENCY SWITCHER (DJIBOUTI FDJ vs INT USD) ========== */
+.currency-toggle {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(18, 32, 56, 0.75);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 3px;
+}
+.curr-btn {
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  line-height: 1;
+}
+.curr-btn:hover {
+  color: var(--text-1);
+}
+.curr-btn.active {
+  background: linear-gradient(135deg, rgba(0, 200, 224, 0.25), rgba(46, 204, 90, 0.25));
+  color: var(--cyan);
+  border: 1px solid rgba(0, 200, 224, 0.45);
+  box-shadow: 0 2px 10px rgba(0, 200, 224, 0.18);
+}
+.modal-currency-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: rgba(6, 14, 26, 0.7);
+  border-bottom: 1px solid var(--border-soft);
+  font-size: 13px;
+  color: var(--text-2);
+}
+.modal-currency-label {
+  font-weight: 600;
+  color: var(--text-2);
+}
+@media (max-width: 900px) {
+  .nav-links .currency-toggle {
+    margin: 8px 0;
+  }
+}
+@media (max-width: 560px) {
+  .modal-currency-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 18px;
+  }
+}
 </style>
 </head>
 <body>
@@ -1715,6 +1777,14 @@ footer {
       <a href="#pourquoi">Pourquoi nous</a>
       <a href="#faq">FAQ</a>
       <a href="#contact">Contact</a>
+      <div class="currency-toggle" role="group" aria-label="Choix de la devise">
+        <button type="button" class="curr-btn active" id="btnCurrFDJ" onclick="setCurrency('FDJ')" title="Tarifs Djibouti en Francs Djibouti (FDJ)">
+          <span>🇩🇯 FDJ</span>
+        </button>
+        <button type="button" class="curr-btn" id="btnCurrUSD" onclick="setCurrency('USD')" title="Tarifs Internationaux en Dollars US ($ USD)">
+          <span>🌐 USD ($)</span>
+        </button>
+      </div>
       <button class="nav-cta" onclick="openDevisModal()">Devis intelligent</button>
     </div>
     <button class="nav-toggle" aria-label="Menu" onclick="document.getElementById('navLinks').classList.toggle('open')">
@@ -1813,7 +1883,7 @@ footer {
           <li><svg viewBox="0 0 24 24" fill="none" stroke="#2ecc5a" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Apps web sur mesure</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="#2ecc5a" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Référencement SEO inclus</li>
         </ul>
-        <div class="service-price">À partir de <strong>600€</strong></div>
+        <div class="service-price">À partir de <strong id="priceWeb">115 000 FDJ</strong></div>
         <div class="service-cta" onclick="openDevisModalFor('web-dev')">
           Demander un devis
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -1833,7 +1903,7 @@ footer {
           <li><svg viewBox="0 0 24 24" fill="none" stroke="#00c8e0" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Sauvegardes automatisées</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="#00c8e0" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Correctifs bugs & évolutions</li>
         </ul>
-        <div class="service-price">À partir de <strong>50€</strong>/mois</div>
+        <div class="service-price">À partir de <strong id="priceMaint">10 000 FDJ</strong>/mois</div>
         <div class="service-cta" onclick="openDevisModalFor('maintenance')">
           Demander un devis
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -1853,7 +1923,7 @@ footer {
           <li><svg viewBox="0 0 24 24" fill="none" stroke="#2d8de0" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Récup. données & antivirus</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="#2d8de0" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Installation réseau / Wi-Fi</li>
         </ul>
-        <div class="service-price">À partir de <strong>30€</strong></div>
+        <div class="service-price">À partir de <strong id="priceRepair">6 000 FDJ</strong></div>
         <div class="service-cta" onclick="openDevisModalFor('repair')">
           Demander un devis
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -1985,7 +2055,7 @@ footer {
           <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
         </summary>
         <div class="faq-answer">
-          Nos sites vitrines démarrent à partir de 600€, les boutiques e-commerce à 1 200€, et les forfaits de maintenance dès 50€/mois. Le diagnostic dépannage informatique est proposé à partir de 30€. Un devis immédiat personnalisé peut être calculé en 60 secondes sur notre site.
+          Pour nos clients à Djibouti, les tarifs sont en Francs Djibouti (FDJ) : nos sites vitrines débutent à partir de 115 000 FDJ ($650 USD), les boutiques e-commerce à 230 000 FDJ ($1 300 USD), et les forfaits de maintenance dès 10 000 FDJ/mois ($55/mois). Le diagnostic dépannage informatique est proposé à partir de 6 000 FDJ ($35 USD). Pour les clients internationaux, la facturation s'effectue en Dollars US ($ USD). Vous pouvez basculer d'une devise à l'autre via le sélecteur FDJ / USD en haut de page.
         </div>
       </details>
 
@@ -2106,6 +2176,19 @@ footer {
       </button>
     </div>
 
+    <!-- Currency Selector for Devis -->
+    <div class="modal-currency-bar">
+      <span class="modal-currency-label">Devise de tarification :</span>
+      <div class="currency-toggle" role="group" aria-label="Devise du devis">
+        <button type="button" class="curr-btn active" id="modalCurrFDJ" onclick="setCurrency('FDJ')">
+          <span>🇩🇯 FDJ (Djibouti)</span>
+        </button>
+        <button type="button" class="curr-btn" id="modalCurrUSD" onclick="setCurrency('USD')">
+          <span>🌐 USD ($ International)</span>
+        </button>
+      </div>
+    </div>
+
     <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
 
     <div class="modal-body">
@@ -2183,6 +2266,7 @@ footer {
       <div class="step-content" data-step="4">
         <h4>Vos coordonnées</h4>
         <p>Pour vous envoyer votre devis et vous recontacter rapidement.</p>
+        <div id="contactError" style="display:none; color: #ff6b6b; background: rgba(255, 107, 107, 0.12); border: 1px solid rgba(255, 107, 107, 0.35); border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 13px; font-weight: 500;"></div>
         <div class="form-row">
           <div class="form-group">
             <label>Nom complet *</label>
@@ -2267,25 +2351,32 @@ const favicon = document.getElementById('sdmonFavicon');
 if (favicon) favicon.href = SDMON_LOGO_B64;
 
 /* ============================================
-   PRICING ENGINE
+   CURRENCY & PRICING ENGINE
+   (FDJ for Djibouti • USD for International)
    ============================================ */
+let currentCurrency = 'FDJ';
+try {
+  const saved = localStorage.getItem('sdmon_currency');
+  if (saved === 'FDJ' || saved === 'USD') currentCurrency = saved;
+} catch (e) {}
+
 const SUB_OPTIONS = {
   'web-dev': [
-    { value: 'site-vitrine', title: 'Site Vitrine', desc: 'Présentation de votre activité', min: 600, max: 1000 },
-    { value: 'ecommerce', title: 'E-Commerce', desc: 'Boutique en ligne complète', min: 1200, max: 3500 },
-    { value: 'app-custom', title: 'App Sur Mesure', desc: 'Solution métier dédiée', min: 2000, max: 8000 },
-    { value: 'landing', title: 'Landing Page', desc: 'Page de conversion ciblée', min: 400, max: 900 }
+    { value: 'site-vitrine', title: 'Site Vitrine', desc: 'Présentation de votre activité', minFDJ: 115000, maxFDJ: 195000, minUSD: 650, maxUSD: 1100, unitFDJ: '', unitUSD: '' },
+    { value: 'ecommerce', title: 'E-Commerce', desc: 'Boutique en ligne complète', minFDJ: 230000, maxFDJ: 675000, minUSD: 1300, maxUSD: 3800, unitFDJ: '', unitUSD: '' },
+    { value: 'app-custom', title: 'App Sur Mesure', desc: 'Solution métier dédiée', minFDJ: 390000, maxFDJ: 1560000, minUSD: 2200, maxUSD: 8800, unitFDJ: '', unitUSD: '' },
+    { value: 'landing', title: 'Landing Page', desc: 'Page de conversion ciblée', minFDJ: 80000, maxFDJ: 170000, minUSD: 450, maxUSD: 950, unitFDJ: '', unitUSD: '' }
   ],
   'maintenance': [
-    { value: 'maint-basic', title: 'Pack Essentiel', desc: 'Mises à jour & sauvegardes', min: 50, max: 100, unit: '/mois' },
-    { value: 'maint-pro', title: 'Pack Pro', desc: '+ monitoring & SAV prioritaire', min: 100, max: 250, unit: '/mois' },
-    { value: 'maint-enterprise', title: 'Pack Enterprise', desc: 'SLA 24/7 & dév. continu', min: 250, max: 600, unit: '/mois' }
+    { value: 'maint-basic', title: 'Pack Essentiel', desc: 'Mises à jour & sauvegardes', minFDJ: 10000, maxFDJ: 20000, minUSD: 55, maxUSD: 110, unitFDJ: '/mois', unitUSD: '/mois' },
+    { value: 'maint-pro', title: 'Pack Pro', desc: '+ monitoring & SAV prioritaire', minFDJ: 20000, maxFDJ: 50000, minUSD: 110, maxUSD: 280, unitFDJ: '/mois', unitUSD: '/mois' },
+    { value: 'maint-enterprise', title: 'Pack Enterprise', desc: 'SLA 24/7 & dév. continu', minFDJ: 50000, maxFDJ: 115000, minUSD: 280, maxUSD: 650, unitFDJ: '/mois', unitUSD: '/mois' }
   ],
   'repair': [
-    { value: 'diagnostic', title: 'Diagnostic', desc: 'Identification de la panne', min: 30, max: 50 },
-    { value: 'rep-software', title: 'Réparation Logicielle', desc: 'OS, virus, lenteurs', min: 50, max: 150 },
-    { value: 'rep-hardware', title: 'Réparation Matérielle', desc: 'Écran, batterie, composants', min: 80, max: 400 },
-    { value: 'reseau', title: 'Installation Réseau', desc: 'Wi-Fi, câblage, switch', min: 100, max: 800 }
+    { value: 'diagnostic', title: 'Diagnostic', desc: 'Identification de la panne', minFDJ: 6000, maxFDJ: 10000, minUSD: 35, maxUSD: 55, unitFDJ: '', unitUSD: '' },
+    { value: 'rep-software', title: 'Réparation Logicielle', desc: 'OS, virus, lenteurs', minFDJ: 10000, maxFDJ: 30000, minUSD: 55, maxUSD: 165, unitFDJ: '', unitUSD: '' },
+    { value: 'rep-hardware', title: 'Réparation Matérielle', desc: 'Écran, batterie, composants', minFDJ: 16000, maxFDJ: 80000, minUSD: 90, maxUSD: 450, unitFDJ: '', unitUSD: '' },
+    { value: 'reseau', title: 'Installation Réseau', desc: 'Wi-Fi, câblage, switch', minFDJ: 20000, maxFDJ: 160000, minUSD: 110, maxUSD: 900, unitFDJ: '', unitUSD: '' }
   ]
 };
 
@@ -2307,6 +2398,23 @@ const URGENCY_MULTIPLIER = {
   'urgent': 1.2
 };
 
+/* Format helper for clean tabular currency display */
+function formatPrice(amount, curr = currentCurrency) {
+  if (curr === 'FDJ') {
+    return `${new Intl.NumberFormat('fr-FR').format(amount)} FDJ`;
+  } else {
+    return `$${new Intl.NumberFormat('en-US').format(amount)} USD`;
+  }
+}
+
+function formatRange(min, max, unit = '', curr = currentCurrency) {
+  if (curr === 'FDJ') {
+    return `${new Intl.NumberFormat('fr-FR').format(min)} FDJ – ${new Intl.NumberFormat('fr-FR').format(max)} FDJ${unit}`;
+  } else {
+    return `$${new Intl.NumberFormat('en-US').format(min)} – $${new Intl.NumberFormat('en-US').format(max)} USD${unit}`;
+  }
+}
+
 /* ============================================
    STATE
    ============================================ */
@@ -2319,11 +2427,71 @@ const devis = {
   details: '',
   budget: null,
   urgency: null,
+  baseMin: 0,
+  baseMax: 0,
   estimateMin: 0,
   estimateMax: 0,
+  estimateFormatted: '—',
   unit: '',
   contact: { name: '', business: '', phone: '', email: '' }
 };
+
+/* ============================================
+   CURRENCY SWITCHER LOGIC
+   ============================================ */
+function setCurrency(curr) {
+  currentCurrency = curr;
+  try {
+    localStorage.setItem('sdmon_currency', curr);
+  } catch (e) {}
+
+  // Update button active states in navbar and modal
+  document.querySelectorAll('#btnCurrFDJ, #modalCurrFDJ').forEach(btn => {
+    btn.classList.toggle('active', curr === 'FDJ');
+  });
+  document.querySelectorAll('#btnCurrUSD, #modalCurrUSD').forEach(btn => {
+    btn.classList.toggle('active', curr === 'USD');
+  });
+
+  // Update starting prices on service cards
+  const pWeb = document.getElementById('priceWeb');
+  const pMaint = document.getElementById('priceMaint');
+  const pRepair = document.getElementById('priceRepair');
+
+  if (curr === 'FDJ') {
+    if (pWeb) pWeb.textContent = '115 000 FDJ';
+    if (pMaint) pMaint.textContent = '10 000 FDJ';
+    if (pRepair) pRepair.textContent = '6 000 FDJ';
+  } else {
+    if (pWeb) pWeb.textContent = '$650 USD';
+    if (pMaint) pMaint.textContent = '$55 USD';
+    if (pRepair) pRepair.textContent = '$35 USD';
+  }
+
+  // Refresh active devis calculation
+  if (devis.service && devis.sub) {
+    const opt = SUB_OPTIONS[devis.service].find(o => o.value === devis.sub);
+    if (opt) {
+      if (curr === 'FDJ') {
+        devis.baseMin = opt.minFDJ;
+        devis.baseMax = opt.maxFDJ;
+        devis.unit = opt.unitFDJ || '';
+      } else {
+        devis.baseMin = opt.minUSD;
+        devis.baseMax = opt.maxUSD;
+        devis.unit = opt.unitUSD || '';
+      }
+      updateEstimate();
+    }
+  }
+
+  // Re-render sub options & budget lists if currently in view
+  if (devis.service) {
+    renderSubOptions();
+    renderBudgetOptions();
+  }
+  renderSummary();
+}
 
 /* ============================================
    MODAL CONTROLS
@@ -2335,7 +2503,6 @@ function openDevisModal() {
 
 function openDevisModalFor(serviceValue) {
   openDevisModal();
-  // Pre-select service
   setTimeout(() => {
     const card = document.querySelector(`.option-card[data-value="${serviceValue}"]`);
     if (card) selectOption('service', card);
@@ -2345,17 +2512,18 @@ function openDevisModalFor(serviceValue) {
 function closeDevisModal() {
   document.getElementById('devisModal').classList.remove('active');
   document.body.style.overflow = '';
-  // Reset
   currentStep = 1;
   showStep(1);
   document.querySelectorAll('.option-card.selected').forEach(c => c.classList.remove('selected'));
   Object.assign(devis, {
     service: null, serviceLabel: null, sub: null, subLabel: null,
     details: '', budget: null, urgency: null,
-    estimateMin: 0, estimateMax: 0, unit: '',
+    baseMin: 0, baseMax: 0, estimateMin: 0, estimateMax: 0, estimateFormatted: '—', unit: '',
     contact: { name: '', business: '', phone: '', email: '' }
   });
   document.querySelectorAll('#devisModal input, #devisModal textarea').forEach(el => el.value = '');
+  const errBox = document.getElementById('contactError');
+  if (errBox) errBox.style.display = 'none';
   updateButtons();
 }
 
@@ -2384,7 +2552,6 @@ function showStep(n) {
 
 function nextStep() {
   if (currentStep === 4) {
-    // Final step: validate contact, generate PDF, show success
     if (!validateContact()) return;
     saveContact();
     generateDevisPDF();
@@ -2410,12 +2577,11 @@ function updateButtons() {
   const prev = document.getElementById('prevBtn');
   prev.disabled = currentStep === 1;
 
-  // Validate current step
   let valid = false;
   if (currentStep === 1) valid = !!devis.service;
   if (currentStep === 2) valid = !!devis.sub;
-  if (currentStep === 3) valid = !!devis.urgency; // budget optional
-  if (currentStep === 4) valid = true; // validated on click
+  if (currentStep === 3) valid = !!devis.urgency;
+  if (currentStep === 4) valid = true;
 
   next.disabled = !valid;
   next.innerHTML = currentStep === 4
@@ -2428,7 +2594,6 @@ function updateButtons() {
    ============================================ */
 function selectOption(field, btn) {
   const value = btn.dataset.value;
-  // Remove selected from siblings
   btn.parentElement.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
   btn.classList.add('selected');
 
@@ -2436,13 +2601,21 @@ function selectOption(field, btn) {
     devis.service = value;
     devis.serviceLabel = SERVICE_LABELS[value];
     devis.sub = null; devis.subLabel = null;
+    devis.baseMin = 0; devis.baseMax = 0;
   } else if (field === 'sub') {
     devis.sub = value;
     const opt = SUB_OPTIONS[devis.service].find(o => o.value === value);
     devis.subLabel = opt.title;
-    devis.estimateMin = opt.min;
-    devis.estimateMax = opt.max;
-    devis.unit = opt.unit || '';
+    if (currentCurrency === 'FDJ') {
+      devis.baseMin = opt.minFDJ;
+      devis.baseMax = opt.maxFDJ;
+      devis.unit = opt.unitFDJ || '';
+    } else {
+      devis.baseMin = opt.minUSD;
+      devis.baseMax = opt.maxUSD;
+      devis.unit = opt.unitUSD || '';
+    }
+    updateEstimate();
   } else if (field === 'budget') {
     devis.budget = value;
   } else if (field === 'urgency') {
@@ -2461,13 +2634,21 @@ function renderSubOptions() {
     devis.service === 'web-dev' ? 'Quel type de site / app ?' :
     devis.service === 'maintenance' ? 'Quel niveau de maintenance ?' :
     'Quel type d\'intervention ?';
-  container.innerHTML = opts.map(o => `
-    <button class="option-card" data-value="${o.value}" onclick="selectOption('sub', this)">
-      <div class="option-card-title">${o.title}</div>
-      <div class="option-card-desc">${o.desc}</div>
-    </button>
-  `).join('');
-  // Re-select if exists
+
+  container.innerHTML = opts.map(o => {
+    const rangeText = currentCurrency === 'FDJ'
+      ? `${new Intl.NumberFormat('fr-FR').format(o.minFDJ)} – ${new Intl.NumberFormat('fr-FR').format(o.maxFDJ)} FDJ${o.unitFDJ || ''}`
+      : `$${new Intl.NumberFormat('en-US').format(o.minUSD)} – $${new Intl.NumberFormat('en-US').format(o.maxUSD)} USD${o.unitUSD || ''}`;
+
+    return `
+      <button type="button" class="option-card" data-value="${o.value}" onclick="selectOption('sub', this)">
+        <div class="option-card-title">${o.title}</div>
+        <div class="option-card-desc">${o.desc}</div>
+        <div style="margin-top:6px; font-size:12px; font-weight:700; color:var(--cyan);">${rangeText}</div>
+      </button>
+    `;
+  }).join('');
+
   if (devis.sub) {
     const card = container.querySelector(`[data-value="${devis.sub}"]`);
     if (card) card.classList.add('selected');
@@ -2477,33 +2658,60 @@ function renderSubOptions() {
 function renderBudgetOptions() {
   const container = document.getElementById('budgetOptions');
   let ranges;
-  if (devis.service === 'maintenance') {
-    ranges = [
-      { value: '<100', label: '< 100€/mois' },
-      { value: '100-250', label: '100-250€/mois' },
-      { value: '250-500', label: '250-500€/mois' },
-      { value: '>500', label: '> 500€/mois' }
-    ];
-  } else if (devis.service === 'repair') {
-    ranges = [
-      { value: '<100', label: '< 100€' },
-      { value: '100-300', label: '100-300€' },
-      { value: '300-700', label: '300-700€' },
-      { value: '>700', label: '> 700€' }
-    ];
+  if (currentCurrency === 'FDJ') {
+    if (devis.service === 'maintenance') {
+      ranges = [
+        { value: '< 20 000 FDJ/mois', label: '< 20 000 FDJ/mois' },
+        { value: '20 000 - 50 000 FDJ/mois', label: '20 000 - 50 000 FDJ/mois' },
+        { value: '50 000 - 100 000 FDJ/mois', label: '50 000 - 100 000 FDJ/mois' },
+        { value: '> 100 000 FDJ/mois', label: '> 100 000 FDJ/mois' }
+      ];
+    } else if (devis.service === 'repair') {
+      ranges = [
+        { value: '< 15 000 FDJ', label: '< 15 000 FDJ' },
+        { value: '15 000 - 40 000 FDJ', label: '15 000 - 40 000 FDJ' },
+        { value: '40 000 - 80 000 FDJ', label: '40 000 - 80 000 FDJ' },
+        { value: '> 80 000 FDJ', label: '> 80 000 FDJ' }
+      ];
+    } else {
+      ranges = [
+        { value: '< 150 000 FDJ', label: '< 150 000 FDJ' },
+        { value: '150 000 - 400 000 FDJ', label: '150 000 - 400 000 FDJ' },
+        { value: '400 000 - 1 000 000 FDJ', label: '400 000 - 1 000 000 FDJ' },
+        { value: '> 1 000 000 FDJ', label: '> 1 000 000 FDJ' }
+      ];
+    }
   } else {
-    ranges = [
-      { value: '<1000', label: '< 1 000€' },
-      { value: '1000-3000', label: '1 000 - 3 000€' },
-      { value: '3000-7000', label: '3 000 - 7 000€' },
-      { value: '>7000', label: '> 7 000€' }
-    ];
+    if (devis.service === 'maintenance') {
+      ranges = [
+        { value: '< $100 USD/mois', label: '< $100 USD/mois' },
+        { value: '$100 - $250 USD/mois', label: '$100 - $250 USD/mois' },
+        { value: '$250 - $500 USD/mois', label: '$250 - $500 USD/mois' },
+        { value: '> $500 USD/mois', label: '> $500 USD/mois' }
+      ];
+    } else if (devis.service === 'repair') {
+      ranges = [
+        { value: '< $100 USD', label: '< $100 USD' },
+        { value: '$100 - $300 USD', label: '$100 - $300 USD' },
+        { value: '$300 - $700 USD', label: '$300 - $700 USD' },
+        { value: '> $700 USD', label: '> $700 USD' }
+      ];
+    } else {
+      ranges = [
+        { value: '< $1,000 USD', label: '< $1,000 USD' },
+        { value: '$1,000 - $3,000 USD', label: '$1,000 - $3,000 USD' },
+        { value: '$3,000 - $7,000 USD', label: '$3,000 - $7,000 USD' },
+        { value: '> $7,000 USD', label: '> $7,000 USD' }
+      ];
+    }
   }
+
   container.innerHTML = ranges.map(r => `
-    <button class="option-card" data-value="${r.value}" onclick="selectOption('budget', this)">
+    <button type="button" class="option-card" data-value="${r.value}" onclick="selectOption('budget', this)">
       <div class="option-card-title">${r.label}</div>
     </button>
   `).join('');
+
   if (devis.budget) {
     const card = container.querySelector(`[data-value="${devis.budget}"]`);
     if (card) card.classList.add('selected');
@@ -2511,34 +2719,50 @@ function renderBudgetOptions() {
 }
 
 function updateEstimate() {
+  if (!devis.baseMin || !devis.baseMax) return;
   const panel = document.getElementById('estimatePanel');
   const value = document.getElementById('estimateValue');
-  const mult = URGENCY_MULTIPLIER[devis.urgency] || 1;
-  const min = Math.round(devis.estimateMin * mult);
-  const max = Math.round(devis.estimateMax * mult);
+  const mult = URGENCY_MULTIPLIER[devis.urgency] || 1.0;
+  const min = Math.round(devis.baseMin * mult);
+  const max = Math.round(devis.baseMax * mult);
   devis.estimateMin = min;
   devis.estimateMax = max;
-  value.textContent = `${min}€ – ${max}€${devis.unit}`;
-  panel.style.display = 'block';
+  devis.estimateFormatted = formatRange(min, max, devis.unit, currentCurrency);
+
+  if (value) value.textContent = devis.estimateFormatted;
+  if (panel && devis.urgency) panel.style.display = 'block';
 }
 
 function renderSummary() {
   document.getElementById('sumService').textContent = devis.serviceLabel || '—';
   document.getElementById('sumSub').textContent = devis.subLabel || '—';
   document.getElementById('sumUrgency').textContent = URGENCY_LABELS[devis.urgency] || '—';
-  document.getElementById('sumEstimate').textContent =
-    devis.estimateMin ? `${devis.estimateMin}€ – ${devis.estimateMax}€${devis.unit}` : '—';
+  document.getElementById('sumEstimate').textContent = devis.estimateFormatted || '—';
 }
 
 /* ============================================
-   CONTACT VALIDATION
+   CONTACT VALIDATION (WITHOUT WINDOW.ALERT)
    ============================================ */
 function validateContact() {
   const name = document.getElementById('contactName').value.trim();
   const phone = document.getElementById('contactPhone').value.trim();
-  if (!name) { alert('Merci de renseigner votre nom.'); return false; }
-  if (!phone) { alert('Merci de renseigner votre numéro WhatsApp.'); return false; }
-  // Save details from step 2
+  const errBox = document.getElementById('contactError');
+
+  if (!name) {
+    if (errBox) {
+      errBox.textContent = 'Veuillez saisir votre nom complet.';
+      errBox.style.display = 'block';
+    }
+    return false;
+  }
+  if (!phone) {
+    if (errBox) {
+      errBox.textContent = 'Veuillez renseigner votre numéro WhatsApp ou téléphone.';
+      errBox.style.display = 'block';
+    }
+    return false;
+  }
+  if (errBox) errBox.style.display = 'none';
   devis.details = document.getElementById('detailsField').value.trim();
   return true;
 }
@@ -2564,11 +2788,9 @@ function generateDevisPDF() {
   // === HEADER BAND ===
   doc.setFillColor(6, 14, 26);
   doc.rect(0, 0, 210, 40, 'F');
-  // SDMON logo (hexagon with gear & circuits)
   try {
     doc.addImage(SDMON_LOGO_B64, 'PNG', 14, 8, 22, 22);
   } catch (e) {
-    // Fallback: green dot if image fails
     doc.setFillColor(46, 204, 90);
     doc.circle(20, 20, 6, 'F');
   }
@@ -2633,7 +2855,8 @@ function generateDevisPDF() {
   y += 10;
 
   doc.text(`Urgence : ${URGENCY_LABELS[devis.urgency]}`, 25, y); y += 6;
-  if (devis.budget) { doc.text(`Budget indicatif : ${devis.budget}€`, 25, y); y += 6; }
+  if (devis.budget) { doc.text(`Budget indicatif : ${devis.budget}`, 25, y); y += 6; }
+  doc.text(`Devise tarifaire : ${currentCurrency === 'FDJ' ? 'Francs Djibouti (FDJ 🇩🇯)' : 'Dollars US ($ USD 🌐)'}`, 25, y); y += 6;
 
   // Details
   if (devis.details) {
@@ -2656,11 +2879,11 @@ function generateDevisPDF() {
   doc.setFont('helvetica', 'bold');
   doc.text('ESTIMATION INDICATIVE', 30, y+10);
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(18);
-  doc.text(`${devis.estimateMin}€ – ${devis.estimateMax}€${devis.unit}`, 30, y+22);
+  doc.setFontSize(17);
+  doc.text(devis.estimateFormatted, 30, y+22);
   doc.setFontSize(7);
   doc.setTextColor(180, 200, 220);
-  doc.text('Le tarif final sera confirmé après échange et validation du périmètre exact.', 30, y+27);
+  doc.text('Le tarif final sera confirmé après validation du cahier des charges exact.', 30, y+27);
   y += 36;
 
   // === PROCESS BLOCK ===
@@ -2699,6 +2922,7 @@ function generateDevisPDF() {
    WHATSAPP TRIGGER
    ============================================ */
 function openWhatsAppWithDevis() {
+  const currBadge = currentCurrency === 'FDJ' ? 'Francs Djibouti (FDJ 🇩🇯)' : 'Dollars US ($ USD 🌐)';
   const msg =
 `Bonjour SDMON 👋
 
@@ -2707,8 +2931,9 @@ Je viens de générer un devis via votre site et souhaite échanger sur mon proj
 📋 *RÉCAPITULATIF*
 • Service : ${devis.serviceLabel}
 • Type : ${devis.subLabel}
+• Devise tarifaire : ${currBadge}
 • Urgence : ${URGENCY_LABELS[devis.urgency]}
-${devis.budget ? `• Budget : ${devis.budget}€\n` : ''}• Estimation : ${devis.estimateMin}€ – ${devis.estimateMax}€${devis.unit}
+${devis.budget ? `• Budget indicatif : ${devis.budget}\n` : ''}• Estimation : ${devis.estimateFormatted}
 
 👤 *CONTACT*
 • Nom : ${devis.contact.name}
@@ -2725,6 +2950,7 @@ Merci !`;
 /* ============================================
    INIT
    ============================================ */
+setCurrency(currentCurrency);
 showStep(1);
 
 // Close modal on ESC

@@ -1,6 +1,6 @@
 {
-  "name": "SDMON — Solutions Web & Informatique • Djibouti",
-  "description": "SDMON — Développement web, maintenance d'applications & dépannage informatique à Djibouti. Devis intelligent en 60 secondes.",
+  "name": "Remix SDMON",
+  "description": "Imported from GitHub: Mahdi516630/SDMON",
   "capabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
   ]
