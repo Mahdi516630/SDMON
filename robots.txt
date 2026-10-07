@@ -1,5 +1,0 @@
-# Robots.txt for SDMON (https://sdmon.com/)
-User-agent: *
-Allow: /
-
-Sitemap: https://sdmon.com/sitemap.xml
