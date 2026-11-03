@@ -18,14 +18,37 @@ function withTimeout(promise, label) {
 }
 
 export async function api(path, options = {}) {
-  let tokenResult;
+  let sessionResult;
   try {
-    tokenResult = await withTimeout(authClient.token(), 'Délai dépassé pendant la récupération du jeton de session. Vérifiez la connexion à Neon Auth puis reconnectez-vous.');
+    sessionResult = await withTimeout(
+      authClient.getSession(),
+      'Délai dépassé pendant la vérification de la session Neon Auth. Rechargez la page puis reconnectez-vous.'
+    );
   } catch (error) {
-    throw new Error(error.message || 'Impossible de récupérer le jeton de session.');
+    throw new Error(error.message || 'Impossible de vérifier la session Neon Auth.');
   }
-  const { data, error } = tokenResult || {};
-  if (error || !data?.token) throw new Error('Session expirée. Veuillez vous reconnecter.');
+
+  const data = sessionResult?.data;
+  const session = data?.session ?? data?.data?.session ?? null;
+  const token =
+    session?.access_token ??
+    session?.token ??
+    session?.accessToken ??
+    data?.access_token ??
+    data?.token ??
+    null;
+
+  if (sessionResult?.error) {
+    throw new Error(sessionResult.error.message || 'La session Neon Auth est invalide. Veuillez vous reconnecter.');
+  }
+  if (!token) {
+    const hasUser = Boolean(data?.user || session?.user || data?.data?.user);
+    throw new Error(
+      hasUser
+        ? 'Session détectée, mais le jeton JWT est absent. Rechargez la page et reconnectez-vous.'
+        : 'Session expirée. Veuillez vous reconnecter.'
+    );
+  }
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -35,7 +58,7 @@ export async function api(path, options = {}) {
       signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${data.token}`,
+        Authorization: `Bearer ${token}`,
         ...(options.headers || {}),
       },
     });
