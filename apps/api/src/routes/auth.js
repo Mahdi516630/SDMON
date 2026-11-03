@@ -31,15 +31,19 @@ router.get('/unlinked-identity', requireIdentity, async (req, res, next) => {
   try {
     const result = await getPool().query('SELECT id, role FROM app_users WHERE auth_subject = $1', [req.authIdentity.subject]);
     const adminCount = await getPool().query("SELECT count(*)::int AS count FROM app_users WHERE role = 'admin' AND is_active = true");
+    const authUser = await getPool().query('SELECT "emailVerified" AS verified FROM neon_auth."user" WHERE id = $1::uuid AND lower(email) = $2', [req.authIdentity.subject, req.authIdentity.email || '']);
+    const emailVerified = authUser.rows[0]?.verified === true;
     const bootstrapEmail = (process.env.SDMON_BOOTSTRAP_ADMIN_EMAIL || '').trim().toLowerCase();
-    const eligible = Boolean(bootstrapEmail && req.authIdentity.email && req.authIdentity.email === bootstrapEmail && adminCount.rows[0].count === 0);
-    return res.json({ data: result.rows[0] ? { linked: true, role: result.rows[0].role } : { linked: false, email: req.authIdentity.email, name: req.authIdentity.name, bootstrapEligible: eligible } });
+    const eligible = Boolean(emailVerified && bootstrapEmail && req.authIdentity.email && req.authIdentity.email === bootstrapEmail && adminCount.rows[0].count === 0);
+    return res.json({ data: result.rows[0] ? { linked: true, role: result.rows[0].role } : { linked: false, email: req.authIdentity.email, name: req.authIdentity.name, emailVerified, bootstrapEligible: eligible } });
   } catch (error) { return next(error); }
 });
 
 router.post('/bootstrap-admin', requireIdentity, async (req, res, next) => {
   const bootstrapEmail = (process.env.SDMON_BOOTSTRAP_ADMIN_EMAIL || '').trim().toLowerCase();
   if (!bootstrapEmail || !req.authIdentity.email || req.authIdentity.email !== bootstrapEmail) return res.status(403).json({ error: 'This identity is not authorized for initial administrator setup' });
+  const authUser = await getPool().query('SELECT "emailVerified" AS verified FROM neon_auth."user" WHERE id = $1::uuid AND lower(email) = $2', [req.authIdentity.subject, req.authIdentity.email]);
+  if (authUser.rows[0]?.verified !== true) return res.status(403).json({ error: 'Vérifie ton adresse e-mail avant de créer le compte administrateur.' });
   const client = await getPool().connect();
   try {
     await client.query('BEGIN');
