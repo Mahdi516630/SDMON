@@ -101,3 +101,5 @@ button { font: inherit; cursor: pointer; }
 .dev-tag.db-checking{color:#8b6b2c;border-color:#eee1bf;background:#fffaf0}
 .dev-tag.db-disconnected i{background:#c43b3b}
 .dev-tag.db-checking i{background:#d29a2e}
+
+.neon-status-nav{display:flex;align-items:center;gap:10px;margin-top:auto;padding:12px 10px;border:1px solid #2b405a;border-radius:10px;color:#c1cbd8}.neon-status-nav>i{width:8px;height:8px;flex:0 0 auto;border-radius:50%;background:#d29a2e}.neon-status-nav strong,.neon-status-nav small{display:block}.neon-status-nav strong{font-size:10px}.neon-status-nav small{margin-top:3px;color:#91a1b7;font-size:9px}.neon-status-nav.is-connected>i{background:#35c28d;box-shadow:0 0 0 3px #35c28d22}.neon-status-nav.is-disconnected>i{background:#ed6b6b}.sidebar-bottom{margin-top:12px}
