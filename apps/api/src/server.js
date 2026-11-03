@@ -4,6 +4,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dashboardRoutes from './routes/dashboard.js';
 import clientRoutes from './routes/clients.js';
+import employeeRoutes from './routes/employees.js';
+import requestRoutes from './routes/requests.js';
 import serviceRoutes from './routes/services.js';
 
 const app = express();
@@ -27,6 +29,8 @@ app.get('/api/v1/health', (_req, res) => {
 
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/clients', clientRoutes);
+app.use('/api/v1/employees', employeeRoutes);
+app.use('/api/v1/requests', requestRoutes);
 app.use('/api/v1/services', serviceRoutes);
 
 app.use((error, _req, res, _next) => {
