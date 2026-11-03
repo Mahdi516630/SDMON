@@ -10,8 +10,7 @@ router.post('/register-client', requireIdentity, async (req, res, next) => {
   const phone = String(req.body?.phone ?? '').trim() || null;
   if (fullName.length < 2 || fullName.length > 160 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'A valid full name and email are required' });
   if (req.authIdentity.email && email !== req.authIdentity.email) return res.status(400).json({ error: 'Email must match the verified identity' });
-  const db = getPool();
-  const client = await db.connect();
+  const client = await getPool().connect();
   try {
     await client.query('BEGIN');
     const existing = await client.query('SELECT id FROM app_users WHERE auth_subject = $1 OR email = $2 FOR UPDATE', [req.authIdentity.subject, email]);
@@ -30,16 +29,37 @@ router.get('/me', requireAuth, (req, res) => res.json({ data: { id: req.user.id,
 router.get('/unlinked-identity', requireIdentity, async (req, res, next) => {
   try {
     const result = await getPool().query('SELECT id, role FROM app_users WHERE auth_subject = $1', [req.authIdentity.subject]);
-    return res.json({ data: result.rows[0] ? { linked: true, role: result.rows[0].role } : { linked: false, email: req.authIdentity.email, name: req.authIdentity.name } });
+    const adminCount = await getPool().query("SELECT count(*)::int AS count FROM app_users WHERE role = 'admin' AND is_active = true");
+    const bootstrapEmail = (process.env.SDMON_BOOTSTRAP_ADMIN_EMAIL || '').trim().toLowerCase();
+    const eligible = Boolean(bootstrapEmail && req.authIdentity.email && req.authIdentity.email === bootstrapEmail && adminCount.rows[0].count === 0);
+    return res.json({ data: result.rows[0] ? { linked: true, role: result.rows[0].role } : { linked: false, email: req.authIdentity.email, name: req.authIdentity.name, bootstrapEligible: eligible } });
   } catch (error) { return next(error); }
+});
+
+router.post('/bootstrap-admin', requireIdentity, async (req, res, next) => {
+  const bootstrapEmail = (process.env.SDMON_BOOTSTRAP_ADMIN_EMAIL || '').trim().toLowerCase();
+  if (!bootstrapEmail || !req.authIdentity.email || req.authIdentity.email !== bootstrapEmail) return res.status(403).json({ error: 'This identity is not authorized for initial administrator setup' });
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('SELECT pg_advisory_xact_lock(73910211)');
+    const existing = await client.query("SELECT id FROM app_users WHERE role = 'admin' AND is_active = true LIMIT 1");
+    if (existing.rows[0]) { await client.query('ROLLBACK'); return res.status(409).json({ error: 'An administrator is already configured' }); }
+    const email = req.authIdentity.email;
+    const fullName = String(req.body?.fullName ?? req.authIdentity.name ?? email).trim().slice(0, 160);
+    const created = await client.query("INSERT INTO app_users (auth_subject, email, full_name, role) VALUES ($1, $2, $3, 'admin') RETURNING id, email, full_name, role", [req.authIdentity.subject, email, fullName]);
+    await client.query("INSERT INTO audit_logs (actor_user_id, action, entity_type, entity_id) VALUES ($1, 'bootstrap_admin', 'app_user', $2)", [created.rows[0].id, created.rows[0].id]);
+    await client.query('COMMIT');
+    return res.status(201).json({ data: created.rows[0] });
+  } catch (error) { await client.query('ROLLBACK'); if (error.code === '23505') return res.status(409).json({ error: 'This identity is already registered' }); return next(error); }
+  finally { client.release(); }
 });
 
 router.post('/users', requireAuth, requireRole('admin'), async (req, res, next) => {
   const { authSubject, email, fullName, role, phone = null, jobTitle = null, companyName = null } = req.body ?? {};
   const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
   if (typeof authSubject !== 'string' || authSubject.length < 3 || authSubject.length > 255 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) || typeof fullName !== 'string' || fullName.trim().length < 2 || fullName.length > 160 || !['employee', 'client'].includes(role)) return res.status(400).json({ error: 'Valid authSubject, email, fullName and employee/client role are required' });
-  const db = getPool();
-  const client = await db.connect();
+  const client = await getPool().connect();
   try {
     await client.query('BEGIN');
     const created = await client.query('INSERT INTO app_users (auth_subject, email, full_name, role) VALUES ($1, $2, $3, $4) RETURNING id, email, full_name, role', [authSubject, normalizedEmail, fullName.trim(), role]);
