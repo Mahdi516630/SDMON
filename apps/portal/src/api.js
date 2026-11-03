@@ -4,7 +4,9 @@ const authUrl = import.meta.env.VITE_NEON_AUTH_URL;
 if (!authUrl) console.warn('VITE_NEON_AUTH_URL is not configured');
 export const authClient = createAuthClient(authUrl);
 
-// VITE_API_BASE_URL must be the API origin (or an origin ending in /api/v1).\n// Normalize it so api() never produces /api/v1/api/v1/... .\nconst configuredApiBase = (import.meta.env.VITE_API_BASE_URL || 'https://sdmon-app-api-dev.onrender.com').trim().replace(/\\/$/, '');\nconst apiBase = configuredApiBase.replace(/\\/api\\/v1$/i, '');
+// VITE_API_BASE_URL must be the API origin, with or without the /api/v1 suffix.
+const configuredApiBase = (import.meta.env.VITE_API_BASE_URL || 'https://sdmon-app-api-dev.onrender.com').trim().replace(/\/$/, '');
+const apiBase = configuredApiBase.replace(/\/api\/v1$/i, '');
 const REQUEST_TIMEOUT_MS = 12000;
 
 function withTimeout(promise, label) {
@@ -20,20 +22,18 @@ function withTimeout(promise, label) {
 export async function api(path, options = {}) {
   let tokenResult;
   try {
-    // Neon Auth exposes getJWTToken() for obtaining the JWT used by our API.
     tokenResult = await withTimeout(
-      authClient.getJWTToken(),
+      authClient.token(),
       'Délai dépassé pendant la récupération du jeton Neon Auth. Rechargez la page puis reconnectez-vous.'
     );
   } catch (error) {
     throw new Error(error.message || 'Impossible de récupérer le jeton Neon Auth.');
   }
 
-  const token = typeof tokenResult === 'string' ? tokenResult : null;
-
   if (tokenResult?.error) {
     throw new Error(tokenResult.error.message || 'La session Neon Auth est invalide. Veuillez vous reconnecter.');
   }
+  const token = tokenResult?.data?.token;
   if (!token || typeof token !== 'string') {
     throw new Error('Aucun jeton JWT valide fourni par Neon Auth. Déconnectez-vous puis reconnectez-vous.');
   }
