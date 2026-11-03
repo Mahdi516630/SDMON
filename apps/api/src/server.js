@@ -1,0 +1,50 @@
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import authRoutes from './routes/auth.js';
+import dashboardRoutes from './routes/dashboard.js';
+import clientRoutes from './routes/clients.js';
+import deliveryNoteRoutes from './routes/delivery-notes.js';
+import employeeRoutes from './routes/employees.js';
+import invoiceRoutes from './routes/invoices.js';
+import paymentRoutes from './routes/payments.js';
+import quoteRoutes from './routes/quotes.js';
+import requestRoutes from './routes/requests.js';
+import serviceRoutes from './routes/services.js';
+import { getPool } from './config/database.js';
+
+const app = express();
+const port = Number.parseInt(process.env.PORT ?? '4000', 10);
+const allowedOrigins = (process.env.CORS_ORIGINS ?? 'http://localhost:5173').split(',').map((origin) => origin.trim()).filter(Boolean);
+app.disable('x-powered-by');
+app.use(helmet());
+app.use(cors({ origin(origin, callback) { if (!origin || allowedOrigins.includes(origin)) return callback(null, true); return callback(new Error('Origin not allowed by CORS')); } }));
+app.use(express.json({ limit: '1mb' }));
+app.get('/', (_req, res) => res.json({ service: 'sdmon-api', status: 'online', health: '/api/v1/health' }));
+app.get('/api/v1/health', async (_req, res) => {
+  try {
+    await getPool().query('SELECT 1');
+    return res.json({ service: 'sdmon-api', status: 'ok', database: { provider: 'Neon', status: 'connected' }, timestamp: new Date().toISOString() });
+  } catch (error) {
+    console.error('Database health check failed:', error.message);
+    return res.status(503).json({ service: 'sdmon-api', status: 'degraded', database: { provider: 'Neon', status: 'disconnected' }, timestamp: new Date().toISOString() });
+  }
+});
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/dashboard', dashboardRoutes);
+app.use('/api/v1/clients', clientRoutes);
+app.use('/api/v1/delivery-notes', deliveryNoteRoutes);
+app.use('/api/v1/employees', employeeRoutes);
+app.use('/api/v1/invoices', invoiceRoutes);
+app.use('/api/v1/payments', paymentRoutes);
+app.use('/api/v1/quotes', quoteRoutes);
+app.use('/api/v1/requests', requestRoutes);
+app.use('/api/v1/services', serviceRoutes);
+app.use((req, res) => res.status(404).json({ error: 'Route not found' }));
+app.use((error, _req, res, _next) => {
+  console.error(error);
+  const status = error.message === 'Origin not allowed by CORS' ? 403 : 500;
+  res.status(status).json({ error: status === 403 ? 'Origin not allowed' : 'Internal server error' });
+});
+app.listen(port, '0.0.0.0', () => console.log(`SDMON API listening on port ${port}`));
