@@ -29,7 +29,7 @@ Le projet Neon `sdmon.io` a une branche par défaut `production` actuellement ar
 - [ ] Création/invitation contrôlée des utilisateurs et attribution du premier administrateur.
 - [ ] CRUD complet clients, employés et services.
 - [ ] Création et cycle de vie des devis, factures et bons de livraison.
-- [ ] Résultat du premier passage CI (workflow ajouté, exécution encore à confirmer).
+- [x] Premier passage CI réussi : syntaxe API et build de production du portail.
 - [ ] Tests automatisés, tests IDOR et tests de sécurité inter-rôles.
 - [ ] Installation des dépendances et exécution réelle de l'API et du portail.
 - [ ] Audit du compte Render et préproduction.
