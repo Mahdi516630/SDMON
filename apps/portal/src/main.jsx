@@ -12,7 +12,7 @@ const navigation = [
   { id: 'quotes', label: 'Devis', roles: ['admin', 'employee', 'client'] },
   { id: 'invoices', label: 'Factures', roles: ['admin', 'employee', 'client'] },
   { id: 'delivery-notes', label: 'Bons de livraison', roles: ['admin', 'employee', 'client'] },
-  { id: 'payments', label: 'Paiements', roles: ['admin', 'employee', 'client'] },
+  { id: 'payments', label: 'Paiements', roles: ['admin', 'employee', 'client'] },\n  { id: 'reports', label: 'Rapports financiers', roles: ['admin'] },
 ];
 
 const resources = {
@@ -73,7 +73,7 @@ function App() {
   const [profile, setProfile] = useState(null);
   const [active, setActive] = useState('overview');
   const [rows, setRows] = useState([]);
-  const [summary, setSummary] = useState(null);
+  const [summary, setSummary] = useState(null);\n  const [reportData, setReportData] = useState(null);
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -131,7 +131,28 @@ function App() {
     } catch (err) { setError(err.message); }
   }
 
-  async function submitPayment(event) {
+
+  async function submitModule(event) {
+    event.preventDefault(); setError('');
+    const form = Object.fromEntries(new FormData(event.currentTarget).entries());
+    try {
+      if (active === 'services') {
+        await api('/services', { method: 'POST', body: JSON.stringify({ code: form.code, nameFr: form.nameFr, unit: form.unit || 'forfait', unitPrice: Number(form.unitPrice), currency: form.currency }) });
+      } else if (active === 'quotes') {
+        await api('/quotes', { method: 'POST', body: JSON.stringify({ clientId: form.clientId, requestId: form.requestId || null, currency: form.currency, validUntil: form.validUntil || null, items: [{ description: form.description, quantity: Number(form.quantity), unitPrice: Number(form.unitPrice), taxRate: Number(form.taxRate || 0) }] }) });
+      } else if (active === 'invoices') {
+        await api('/invoices', { method: 'POST', body: JSON.stringify({ quoteId: form.quoteId, dueDate: form.dueDate || null }) });
+      } else if (active === 'delivery-notes') {
+        await api('/delivery-notes', { method: 'POST', body: JSON.stringify({ clientId: form.clientId, requestId: form.requestId || null, invoiceId: form.invoiceId || null, deliveredTo: form.deliveredTo || null, items: [{ description: form.description, quantity: Number(form.quantity), unit: form.unit || 'unité' }] }) });
+      } else if (active === 'requests') {
+        await api(`/requests/${form.requestId}/status`, { method: 'PATCH', body: JSON.stringify({ status: form.status, assignedEmployeeId: form.assignedEmployeeId || undefined }) });
+      } else if (active === 'employees') {
+        await api('/auth/users', { method: 'POST', body: JSON.stringify({ authSubject: form.authSubject, email: form.email, fullName: form.fullName, role: form.role, phone: form.phone, jobTitle: form.jobTitle }) });
+      }
+      await loadModule();
+    } catch (err) { setError(err.message); }
+  }
+\n  async function submitPayment(event) {
     event.preventDefault(); setError('');
     try {
       await api('/payments', { method: 'POST', body: JSON.stringify(paymentForm) });
@@ -157,7 +178,7 @@ function App() {
     <main className="workspace">
       <header className="workspace-header"><div><span className="breadcrumb">SDMON / {activeLabel}</span><h1>{active === 'overview' ? 'Tableau de bord' : resource?.title}</h1></div><span className="dev-tag"><i /> CONNECTÉ</span></header>
       {error && <p className="error-message page-error" role="alert">{error}</p>}
-      {active === 'overview' ? <><section className="welcome-panel"><div><p className="eyebrow">GESTION INTÉGRÉE SDMON</p><h2>Bienvenue, {profile.fullName || 'utilisateur'}.</h2><p>Votre espace SDMON est connecté à l'API de gestion.</p></div><div className="welcome-mark">S</div></section>
+      {active === 'reports' && profile.role === 'admin' ? <section className="panel"><div className="panel-heading"><div><h3>Rapports financiers</h3><p>Les montants sont ventilés par devise ; aucune conversion DJF/USD n'est supposée.</p></div><button className="secondary-button" onClick={loadModule}>Actualiser</button></div><h4>Facturation par devise</h4><DataTable rows={reportData?.invoiced || []} columns={['currency','total']} /><h4>Encaissements par devise</h4><DataTable rows={reportData?.collected || []} columns={['currency','total']} /><h4>Soldes clients restants</h4><DataTable rows={reportData?.outstanding || []} columns={['currency','total']} /><h4>Encaissements mensuels</h4><DataTable rows={reportData?.monthlyCollections || []} columns={['month','currency','total']} /></section> : null}\n      {active === 'overview' ? <><section className="welcome-panel"><div><p className="eyebrow">GESTION INTÉGRÉE SDMON</p><h2>Bienvenue, {profile.fullName || 'utilisateur'}.</h2><p>Votre espace SDMON est connecté à l'API de gestion.</p></div><div className="welcome-mark">S</div></section>
         {profile.role === 'admin' && <section className="metrics">
           <article><span>Clients</span><strong>{summary?.clients ?? '—'}</strong><small>Comptes clients</small></article>
           <article><span>Employés actifs</span><strong>{summary?.activeEmployees ?? '—'}</strong><small>Effectif actif</small></article>
@@ -167,7 +188,18 @@ function App() {
         <section className="panel"><div className="panel-heading"><div><h3>Accès rapides</h3><p>Modules autorisés pour votre rôle : {profile.role}</p></div></div><div className="quick-links">{visibleNavigation.filter((item) => item.id !== 'overview').map((item) => <button key={item.id} onClick={() => setActive(item.id)}><strong>{item.label}</strong><b>›</b></button>)}</div></section>
       </> : <section className="panel">
         <div className="panel-heading"><div><h3>{resource?.title}</h3><p>Données chargées depuis la base SDMON</p></div><button className="secondary-button" onClick={loadModule}>Actualiser</button></div>
-        {active === 'requests' && profile.role === 'client' && <form className="inline-form" onSubmit={submitRequest}><h3>Nouvelle demande</h3><label>Titre<input required minLength="3" value={requestForm.title} onChange={(e) => setRequestForm({ ...requestForm, title: e.target.value })} /></label><label>Service<select value={requestForm.serviceId} onChange={(e) => setRequestForm({ ...requestForm, serviceId: e.target.value })}><option value="">Non précisé</option>{services.map((s) => <option key={s.id} value={s.id}>{s.name_fr}</option>)}</select></label><label>Description<textarea value={requestForm.description} onChange={(e) => setRequestForm({ ...requestForm, description: e.target.value })} /></label><button className="primary-button">Envoyer la demande</button></form>}
+
+        {['admin', 'employee'].includes(profile.role) && ['services', 'quotes', 'invoices', 'delivery-notes', 'requests'].includes(active) && <form className="inline-form" onSubmit={submitModule}>
+          <h3>{active === 'services' ? 'Ajouter un service' : active === 'quotes' ? 'Créer un devis' : active === 'invoices' ? 'Émettre une facture depuis un devis accepté' : active === 'delivery-notes' ? 'Créer un bon de livraison' : 'Mettre à jour une demande'}</h3>
+          {active === 'services' && <><label>Code<input name="code" required placeholder="WEB-001" /></label><label>Nom du service<input name="nameFr" required /></label><label>Prix unitaire<input name="unitPrice" type="number" min="0" step="0.01" required /></label><label>Devise<select name="currency"><option>DJF</option><option>USD</option></select></label><label>Unité<input name="unit" defaultValue="forfait" /></label></>}
+          {active === 'quotes' && <><label>ID client<input name="clientId" required /></label><label>ID demande (facultatif)<input name="requestId" /></label><label>Description<input name="description" required /></label><label>Quantité<input name="quantity" type="number" min="0.01" step="0.01" defaultValue="1" required /></label><label>Prix unitaire<input name="unitPrice" type="number" min="0" step="0.01" required /></label><label>Taxe (%)<input name="taxRate" type="number" min="0" max="100" step="0.01" defaultValue="0" /></label><label>Devise<select name="currency"><option>DJF</option><option>USD</option></select></label><label>Valide jusqu'au<input name="validUntil" type="date" /></label></>}
+          {active === 'invoices' && <><label>ID du devis accepté<input name="quoteId" required /></label><label>Date d'échéance<input name="dueDate" type="date" /></label></>}
+          {active === 'delivery-notes' && <><label>ID client<input name="clientId" required /></label><label>ID demande<input name="requestId" /></label><label>ID facture<input name="invoiceId" /></label><label>Destinataire<input name="deliveredTo" /></label><label>Description<input name="description" required /></label><label>Quantité<input name="quantity" type="number" min="0.01" step="0.01" defaultValue="1" required /></label><label>Unité<input name="unit" defaultValue="unité" /></label></>}
+          {active === 'requests' && <><label>ID demande<input name="requestId" required /></label><label>Nouveau statut<select name="status"><option value="reviewing">En examen</option><option value="quoted">Devis préparé</option><option value="approved">Approuvée</option><option value="in_progress">En cours</option><option value="completed">Terminée</option><option value="rejected">Rejetée</option><option value="cancelled">Annulée</option></select></label><label>ID employé à affecter (admin)<input name="assignedEmployeeId" placeholder="UUID facultatif" /></label></>}
+          <button className="primary-button">Enregistrer</button>
+        </form>}
+        {active === 'employees' && profile.role === 'admin' && <form className="inline-form" onSubmit={submitModule}><h3>Associer un compte Neon Auth à un rôle SDMON</h3><p>L'utilisateur doit d'abord avoir créé son compte Neon Auth. Renseignez son identifiant de sujet (sub) vérifié.</p><label>Auth subject<input name="authSubject" required /></label><label>E-mail<input name="email" type="email" required /></label><label>Nom complet<input name="fullName" required /></label><label>Rôle<select name="role"><option value="employee">Employé</option><option value="client">Client</option></select></label><label>Téléphone<input name="phone" /></label><label>Fonction<input name="jobTitle" /></label><button className="primary-button">Créer le profil</button></form>}
+\n        {active === 'requests' && profile.role === 'client' && <form className="inline-form" onSubmit={submitRequest}><h3>Nouvelle demande</h3><label>Titre<input required minLength="3" value={requestForm.title} onChange={(e) => setRequestForm({ ...requestForm, title: e.target.value })} /></label><label>Service<select value={requestForm.serviceId} onChange={(e) => setRequestForm({ ...requestForm, serviceId: e.target.value })}><option value="">Non précisé</option>{services.map((s) => <option key={s.id} value={s.id}>{s.name_fr}</option>)}</select></label><label>Description<textarea value={requestForm.description} onChange={(e) => setRequestForm({ ...requestForm, description: e.target.value })} /></label><button className="primary-button">Envoyer la demande</button></form>}
         {active === 'payments' && ['admin', 'employee'].includes(profile.role) && <form className="inline-form" onSubmit={submitPayment}><h3>Enregistrer un paiement</h3><p>Le paiement est rapproché d'une facture existante ; le dépassement du solde est refusé par l'API.</p><label>ID de facture<input required value={paymentForm.invoiceId} onChange={(e) => setPaymentForm({ ...paymentForm, invoiceId: e.target.value })} /></label><label>Montant<input required type="number" min="0.01" step="0.01" value={paymentForm.amount} onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })} /></label><label>Méthode<select value={paymentForm.paymentMethod} onChange={(e) => setPaymentForm({ ...paymentForm, paymentMethod: e.target.value })}><option value="cash">Espèces</option><option value="bank_transfer">Virement</option><option value="cheque">Chèque</option><option value="mobile_money">Mobile money</option><option value="other">Autre</option></select></label><label>Date<input type="date" value={paymentForm.paymentDate} onChange={(e) => setPaymentForm({ ...paymentForm, paymentDate: e.target.value })} /></label><label>Référence<input value={paymentForm.reference} onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })} /></label><button className="primary-button">Enregistrer</button></form>}
         {loading ? <div className="empty-state">Chargement…</div> : <DataTable rows={rows} columns={resource?.columns || []} />}
       </section>}
