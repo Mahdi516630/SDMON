@@ -27,7 +27,7 @@ const resources = {
   payments: { title: 'Paiements', path: '/payments', columns: ['payment_number', 'invoice_number', 'amount', 'currency', 'payment_method', 'payment_date'] },
 };
 
-function AuthScreen({ onAuthenticated }) {
+function AuthScreen({ onAuthenticated, adminOnly = false }) {
   const [mode, setMode] = useState('signin');
   const [form, setForm] = useState({ name: '', email: '', password: '', companyName: '', phone: '' });
   const [busy, setBusy] = useState(false);
@@ -51,14 +51,14 @@ function AuthScreen({ onAuthenticated }) {
 
   return <main className="auth-page"><form className="auth-card" onSubmit={submit}>
     <div className="brand auth-brand"><span className="brand-mark">S</span><span>SDMON <small>BUSINESS SPACE</small></span></div>
-    <p className="eyebrow">ESPACE SÉCURISÉ</p><h1>{mode === 'signin' ? 'Connexion' : 'Créer un compte client'}</h1>
+    <p className="eyebrow">{adminOnly ? 'ACCÈS ADMINISTRATEUR' : 'ESPACE SÉCURISÉ'}</p><h1>{mode === 'signin' ? (adminOnly ? 'Connexion administrateur' : 'Connexion') : 'Créer un compte client'}</h1>
     <p className="auth-subtitle">Accédez à vos services et à votre espace de gestion SDMON.</p>
     {mode === 'signup' && <><label>Nom complet<input required value={form.name} onChange={change('name')} autoComplete="name" /></label><label>Entreprise (facultatif)<input value={form.companyName} onChange={change('companyName')} /></label><label>Téléphone<input value={form.phone} onChange={change('phone')} /></label></>}
     <label>Adresse e-mail<input required type="email" value={form.email} onChange={change('email')} autoComplete="email" /></label>
     <label>Mot de passe<input required minLength="8" type="password" value={form.password} onChange={change('password')} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} /></label>
     {error && <p className="error-message" role="alert">{error}</p>}
     <button className="primary-button" disabled={busy}>{busy ? 'Veuillez patienter…' : mode === 'signin' ? 'Se connecter' : 'Créer mon compte'}</button>
-    <button type="button" className="text-button" onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(''); }}>{mode === 'signin' ? 'Créer un compte client' : 'Déjà inscrit ? Se connecter'}</button>
+    {!adminOnly && <button type="button" className="text-button" onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(''); }}>{mode === 'signin' ? 'Créer un compte client' : 'Déjà inscrit ? Se connecter'}</button>}
   </form></main>;
 }
 
@@ -70,6 +70,8 @@ function DataTable({ rows, columns }) {
 }
 
 function App() {
+  const adminEntry = window.location.pathname.replace(/\\/+$/, '') === '/admin';
+  const [databaseStatus, setDatabaseStatus] = useState('checking');
   const [sessionUser, setSessionUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [active, setActive] = useState('overview');
@@ -94,6 +96,25 @@ function App() {
   }, []);
 
   useEffect(() => { loadProfile().catch((err) => setError(err.message)); }, [loadProfile]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let interval;
+    const checkDatabase = async () => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      try {
+        const response = await fetch(`${apiBase}/api/v1/health`, { signal: controller.signal, cache: 'no-store' });
+        const result = await response.json().catch(() => ({}));
+        if (!cancelled) setDatabaseStatus(response.ok && result.database?.status === 'connected' ? 'connected' : 'disconnected');
+      } catch {
+        if (!cancelled) setDatabaseStatus('disconnected');
+      } finally { clearTimeout(timeout); }
+    };
+    checkDatabase();
+    interval = setInterval(checkDatabase, 30000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, []);
 
   const visibleNavigation = useMemo(() => navigation.filter((item) => !profile || item.roles.includes(profile.role)), [profile]);
 
@@ -164,22 +185,24 @@ function App() {
     } catch (err) { setError(err.message); }
   }
 
-  if (!sessionUser) return <AuthScreen onAuthenticated={loadProfile} />;
+  if (!sessionUser) return <AuthScreen onAuthenticated={loadProfile} adminOnly={adminEntry} />;
   if (!profile) return <main className="auth-page"><div className="auth-card">{error ? <><h1>Impossible de charger le profil</h1><p className="error-message" role="alert">{error}</p><button className="primary-button" onClick={() => { setError(''); loadProfile().catch((err) => setError(err.message)); }}>Réessayer</button><button className="text-button" onClick={signOut}>Se déconnecter</button></> : 'Chargement du profil…'}</div></main>;
-  if (profile.unlinked) return <main className="auth-page"><section className="auth-card"><h1>Compte non activé</h1><p>Votre identité est authentifiée, mais aucun rôle SDMON ne lui est attribué.</p><p>{profile.email}</p>{profile.bootstrapEligible ? <button className="primary-button" onClick={async () => { try { await api('/auth/bootstrap-admin', { method: 'POST', body: JSON.stringify({ fullName: profile.name || profile.email }) }); await loadProfile(); } catch (err) { setError(err.message); } }}>Configurer le premier compte administrateur</button> : <button className="primary-button" onClick={async () => { try { await api('/auth/register-client', { method: 'POST', body: JSON.stringify({ fullName: profile.name || profile.email, email: profile.email }) }); await loadProfile(); } catch (err) { setError(err.message); } }}>Activer mon compte client</button>}{error && <p className="error-message">{error}</p>}<button className="text-button" onClick={signOut}>Se déconnecter</button></section></main>;
+  if (adminEntry && !profile.unlinked && profile.role !== 'admin') return <main className="auth-page"><section className="auth-card"><h1>Accès administrateur refusé</h1><p>Ce compte n'a pas le rôle administrateur SDMON. Connectez-vous avec le compte administrateur autorisé.</p><button className="text-button" onClick={signOut}>Se déconnecter</button><a className="text-button" href="/">Retour à l'espace client</a></section></main>;
+  if (profile.unlinked) return <main className="auth-page"><section className="auth-card"><h1>Compte non activé</h1><p>Votre identité est authentifiée, mais aucun rôle SDMON ne lui est attribué.</p><p>{profile.email}</p>{profile.bootstrapEligible ? <button className="primary-button" onClick={async () => { try { await api('/auth/bootstrap-admin', { method: 'POST', body: JSON.stringify({ fullName: profile.name || profile.email }) }); await loadProfile(); } catch (err) { setError(err.message); } }}>Configurer le premier compte administrateur</button> : adminEntry ? <p className="error-message">Ce compte n'est pas autorisé à initialiser le premier administrateur.</p> : <button className="primary-button" onClick={async () => { try { await api('/auth/register-client', { method: 'POST', body: JSON.stringify({ fullName: profile.name || profile.email, email: profile.email }) }); await loadProfile(); } catch (err) { setError(err.message); } }}>Activer mon compte client</button>}{error && <p className="error-message">{error}</p>}<button className="text-button" onClick={signOut}>Se déconnecter</button></section></main>;
 
   const activeLabel = visibleNavigation.find((item) => item.id === active)?.label || 'Vue générale';
   const resource = resources[active];
 
   return <div className="app-shell">
     <aside className="sidebar">
-      <a className="brand" href="/" aria-label="SDMON"><span className="brand-mark">S</span><span>SDMON <small>BUSINESS SPACE</small></span></a>
+      <a className="brand" href={adminEntry ? '/admin' : '/'} aria-label="SDMON"><span className="brand-mark">S</span><span>SDMON <small>BUSINESS SPACE</small></span></a>
       <p className="nav-caption">ESPACE DE TRAVAIL</p>
+      {profile.role === 'admin' && <a className="admin-shortcut" href="/admin">Accès administrateur</a>}
       <nav aria-label="Navigation principale">{visibleNavigation.map((item) => <button key={item.id} className={active === item.id ? 'nav-item active' : 'nav-item'} onClick={() => setActive(item.id)}>{item.label}</button>)}</nav>
       <div className="sidebar-bottom"><span className="profile-avatar">{(profile.fullName || profile.email || 'U').slice(0, 1).toUpperCase()}</span><span><strong>{profile.fullName || profile.email}</strong><small>{profile.role}</small></span><button className="logout-button" onClick={signOut}>Quitter</button></div>
     </aside>
     <main className="workspace">
-      <header className="workspace-header"><div><span className="breadcrumb">SDMON / {activeLabel}</span><h1>{active === 'overview' ? 'Tableau de bord' : active === 'reports' ? 'Rapports financiers' : resource?.title}</h1></div><span className="dev-tag"><i /> CONNECTÉ</span></header>
+      <header className="workspace-header"><div><span className="breadcrumb">SDMON / {activeLabel}</span><h1>{active === 'overview' ? 'Tableau de bord' : active === 'reports' ? 'Rapports financiers' : resource?.title}</h1></div><span className={`dev-tag ${databaseStatus === 'connected' ? 'db-connected' : databaseStatus === 'disconnected' ? 'db-disconnected' : 'db-checking'}`} title="Vérification réelle de la connexion PostgreSQL Neon"><i /> {databaseStatus === 'connected' ? 'NEON DB CONNECTÉ' : databaseStatus === 'disconnected' ? 'NEON DB HORS LIGNE' : 'VÉRIFICATION NEON…'}</span></header>
       {error && <p className="error-message page-error" role="alert">{error}</p>}
       {active === 'reports' && profile.role === 'admin' ? <section className="panel"><div className="panel-heading"><div><h3>Rapports financiers</h3><p>Les montants sont ventilés par devise ; aucune conversion DJF/USD n'est supposée.</p></div><button className="secondary-button" onClick={loadModule}>Actualiser</button></div><h4>Facturation par devise</h4><DataTable rows={reportData?.invoiced || []} columns={['currency','total']} /><h4>Encaissements par devise</h4><DataTable rows={reportData?.collected || []} columns={['currency','total']} /><h4>Soldes clients restants</h4><DataTable rows={reportData?.outstanding || []} columns={['currency','total']} /><h4>Encaissements mensuels</h4><DataTable rows={reportData?.monthlyCollections || []} columns={['month','currency','total']} /></section> : null}
       {active === 'overview' ? <><section className="welcome-panel"><div><p className="eyebrow">GESTION INTÉGRÉE SDMON</p><h2>Bienvenue, {profile.fullName || 'utilisateur'}.</h2><p>Votre espace SDMON est connecté à l'API de gestion.</p></div><div className="welcome-mark">S</div></section>
