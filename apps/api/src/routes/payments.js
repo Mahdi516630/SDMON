@@ -54,7 +54,7 @@ router.post('/', requireRole('admin', 'employee'), async (req, res, next) => {
   try {
     await client.query('BEGIN');
     const invoiceResult = await client.query(
-      `SELECT i.id, i.total, i.status
+      `SELECT i.id, i.total, i.status, i.currency
        FROM invoices i
        LEFT JOIN quotes q ON q.id = i.quote_id
        LEFT JOIN service_requests r ON r.id = q.request_id
@@ -83,10 +83,10 @@ router.post('/', requireRole('admin', 'employee'), async (req, res, next) => {
 
     const paymentNumber = `PAY-${randomUUID().slice(0, 8).toUpperCase()}`;
     const inserted = await client.query(
-      `INSERT INTO payments (payment_number, invoice_id, amount, payment_method, payment_date, reference, received_by, notes)
-       VALUES ($1, $2, $3, $4, COALESCE($5::date, CURRENT_DATE), $6, $7, $8)
+      `INSERT INTO payments (payment_number, invoice_id, amount, currency, payment_method, payment_date, reference, received_by, notes)
+       VALUES ($1, $2, $3, $4, $5, COALESCE($6::date, CURRENT_DATE), $7, $8, $9)
        RETURNING id, payment_number, invoice_id, amount, currency, payment_method, payment_date, reference`,
-      [paymentNumber, invoiceId, (Number(cents) / 100).toFixed(2), paymentMethod, paymentDate ?? null, reference, req.user.id, notes],
+      [paymentNumber, invoiceId, (Number(cents) / 100).toFixed(2), invoice.currency, paymentMethod, paymentDate ?? null, reference, req.user.id, notes],
     );
 
     const newPaid = paidCents + cents;
