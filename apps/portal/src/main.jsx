@@ -165,7 +165,7 @@ function App() {
   }
 
   if (!sessionUser) return <AuthScreen onAuthenticated={loadProfile} />;
-  if (!profile) return <main className="auth-page"><div className="auth-card">Chargement du profil…</div></main>;
+  if (!profile) return <main className="auth-page"><div className="auth-card">{error ? <><h1>Impossible de charger le profil</h1><p className="error-message" role="alert">{error}</p><button className="primary-button" onClick={() => { setError(''); loadProfile().catch((err) => setError(err.message)); }}>Réessayer</button><button className="text-button" onClick={signOut}>Se déconnecter</button></> : 'Chargement du profil…'}</div></main>;
   if (profile.unlinked) return <main className="auth-page"><section className="auth-card"><h1>Compte non activé</h1><p>Votre identité est authentifiée, mais aucun rôle SDMON ne lui est attribué.</p><p>{profile.email}</p>{profile.bootstrapEligible ? <button className="primary-button" onClick={async () => { try { await api('/auth/bootstrap-admin', { method: 'POST', body: JSON.stringify({ fullName: profile.name || profile.email }) }); await loadProfile(); } catch (err) { setError(err.message); } }}>Configurer le premier compte administrateur</button> : <button className="primary-button" onClick={async () => { try { await api('/auth/register-client', { method: 'POST', body: JSON.stringify({ fullName: profile.name || profile.email, email: profile.email }) }); await loadProfile(); } catch (err) { setError(err.message); } }}>Activer mon compte client</button>}{error && <p className="error-message">{error}</p>}<button className="text-button" onClick={signOut}>Se déconnecter</button></section></main>;
 
   const activeLabel = visibleNavigation.find((item) => item.id === active)?.label || 'Vue générale';
