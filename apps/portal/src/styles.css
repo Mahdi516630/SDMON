@@ -78,3 +78,17 @@ button { font: inherit; cursor: pointer; }
   .quick-links { grid-template-columns: 1fr; }
   .workspace-footer { flex-direction: column; }
 }
+
+
+.auth-page{min-height:100vh;display:grid;place-items:center;padding:28px;background:#f4f7fb}
+.auth-card{width:min(100%,460px);background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:34px;box-shadow:0 18px 55px rgba(20,40,70,.08);display:grid;gap:14px}
+.auth-brand{margin-bottom:12px}.auth-card h1{margin:0;font-size:28px}.auth-subtitle{margin:0 0 8px;color:#64748b;line-height:1.6}
+.auth-card label,.inline-form label{display:grid;gap:7px;font-size:13px;font-weight:700;color:#344256}
+.auth-card input,.inline-form input,.inline-form select,.inline-form textarea{width:100%;border:1px solid #d8e1eb;border-radius:9px;padding:11px 12px;font:inherit;background:#fff;color:#17263c}
+.primary-button,.secondary-button{border:0;border-radius:9px;padding:11px 16px;font-weight:700;background:#126b55;color:#fff}
+.secondary-button{background:#e8f1ef;color:#126b55}.text-button{border:0;background:transparent;color:#126b55;padding:8px}
+.error-message{padding:10px 12px;border-radius:8px;background:#fff0f0;color:#a52828;font-size:13px}.page-error{margin:0 0 14px}
+.table-wrap{overflow:auto;width:100%}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:13px 12px;border-bottom:1px solid #e8edf3;white-space:nowrap}th{font-size:11px;text-transform:uppercase;color:#64748b;background:#f8fafc}
+.empty-state{padding:28px;text-align:center;color:#64748b}.inline-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;padding:18px 0 22px;margin-bottom:16px;border-bottom:1px solid #e8edf3}.inline-form h3,.inline-form p{grid-column:1/-1;margin:0}.inline-form textarea{min-height:80px}.inline-form button{align-self:end}
+.logout-button{border:0;background:transparent;color:#64748b;font-size:12px;margin-left:auto}.sidebar-bottom{display:flex;align-items:center;gap:10px}
+@media(max-width:760px){.auth-card{padding:24px}.sidebar{position:relative;width:100%;height:auto}.workspace{padding:20px}.sidebar-bottom{position:static}.table-wrap{max-width:100%}}
