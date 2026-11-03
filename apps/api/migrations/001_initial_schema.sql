@@ -2,8 +2,6 @@
 -- Draft migration: review and apply only to an isolated development branch.
 -- Authentication identities are supplied by Neon Managed Auth; passwords are never stored here.
 
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
 CREATE TABLE app_users (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   auth_subject text NOT NULL UNIQUE,
@@ -54,7 +52,7 @@ CREATE TABLE services (
   description_en text,
   unit text NOT NULL DEFAULT 'forfait',
   default_unit_price numeric(14,2) NOT NULL DEFAULT 0 CHECK (default_unit_price >= 0),
-  currency char(3) NOT NULL DEFAULT 'DJF' CHECK (currency = 'DJF'),
+  currency char(3) NOT NULL DEFAULT 'DJF' CHECK (currency IN ('DJF', 'USD')),
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
@@ -85,7 +83,7 @@ CREATE TABLE quotes (
     CHECK (status IN ('draft', 'sent', 'accepted', 'rejected', 'expired', 'cancelled')),
   issue_date date NOT NULL DEFAULT CURRENT_DATE,
   valid_until date,
-  currency char(3) NOT NULL DEFAULT 'DJF' CHECK (currency = 'DJF'),
+  currency char(3) NOT NULL DEFAULT 'DJF' CHECK (currency IN ('DJF', 'USD')),
   subtotal numeric(14,2) NOT NULL DEFAULT 0 CHECK (subtotal >= 0),
   tax_total numeric(14,2) NOT NULL DEFAULT 0 CHECK (tax_total >= 0),
   total numeric(14,2) NOT NULL DEFAULT 0 CHECK (total >= 0),
@@ -116,7 +114,7 @@ CREATE TABLE invoices (
     CHECK (status IN ('draft', 'issued', 'partially_paid', 'paid', 'overdue', 'cancelled')),
   issue_date date NOT NULL DEFAULT CURRENT_DATE,
   due_date date,
-  currency char(3) NOT NULL DEFAULT 'DJF' CHECK (currency = 'DJF'),
+  currency char(3) NOT NULL DEFAULT 'DJF' CHECK (currency IN ('DJF', 'USD')),
   subtotal numeric(14,2) NOT NULL DEFAULT 0 CHECK (subtotal >= 0),
   tax_total numeric(14,2) NOT NULL DEFAULT 0 CHECK (tax_total >= 0),
   total numeric(14,2) NOT NULL DEFAULT 0 CHECK (total >= 0),
@@ -168,7 +166,7 @@ CREATE TABLE payments (
   payment_number text NOT NULL UNIQUE,
   invoice_id uuid NOT NULL REFERENCES invoices(id) ON DELETE RESTRICT,
   amount numeric(14,2) NOT NULL CHECK (amount > 0),
-  currency char(3) NOT NULL DEFAULT 'DJF' CHECK (currency = 'DJF'),
+  currency char(3) NOT NULL DEFAULT 'DJF' CHECK (currency IN ('DJF', 'USD')),
   payment_method text NOT NULL
     CHECK (payment_method IN ('cash', 'bank_transfer', 'cheque', 'mobile_money', 'other')),
   payment_date date NOT NULL DEFAULT CURRENT_DATE,
