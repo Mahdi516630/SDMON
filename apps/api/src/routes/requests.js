@@ -99,4 +99,34 @@ router.post('/', requireRole('client'), async (req, res, next) => {
   }
 });
 
+
+router.patch('/:id/status', async (req, res, next) => {
+  const { status, assignedEmployeeId } = req.body ?? {};
+  const allowedStatuses = ['new', 'reviewing', 'quoted', 'approved', 'in_progress', 'completed', 'rejected', 'cancelled'];
+  if (!allowedStatuses.includes(status)) return res.status(400).json({ error: 'Invalid request status' });
+  if (req.user.role === 'client' && status !== 'cancelled') return res.status(403).json({ error: 'Clients may only cancel their own requests' });
+  if (req.user.role === 'employee' && assignedEmployeeId !== undefined) return res.status(403).json({ error: 'Employees cannot reassign requests' });
+  const db = getPool();
+  try {
+    const ownership = req.user.role === 'client'
+      ? await db.query('SELECT r.id FROM service_requests r JOIN clients c ON c.id = r.client_id WHERE r.id = $1 AND c.user_id = $2 AND r.status IN (\'new\', \'reviewing\')', [req.params.id, req.user.id])
+      : req.user.role === 'employee'
+        ? await db.query('SELECT r.id FROM service_requests r JOIN employees e ON e.id = r.assigned_employee_id WHERE r.id = $1 AND e.user_id = $2', [req.params.id, req.user.id])
+        : await db.query('SELECT id FROM service_requests WHERE id = $1', [req.params.id]);
+    if (!ownership.rows[0]) return res.status(404).json({ error: 'Request not found or not accessible' });
+    if (assignedEmployeeId !== undefined && req.user.role === 'admin') {
+      if (assignedEmployeeId !== null) {
+        const employee = await db.query("SELECT id FROM employees WHERE id = $1 AND employment_status = 'active'", [assignedEmployeeId]);
+        if (!employee.rows[0]) return res.status(400).json({ error: 'Active employee not found' });
+      }
+    }
+    const updated = await db.query(
+      'UPDATE service_requests SET status = $1, assigned_employee_id = CASE WHEN $2::boolean THEN $3::uuid ELSE assigned_employee_id END, updated_at = now() WHERE id = $4 RETURNING id, request_number, status, assigned_employee_id',
+      [status, assignedEmployeeId !== undefined, assignedEmployeeId ?? null, req.params.id],
+    );
+    await db.query("INSERT INTO audit_logs (actor_user_id, action, entity_type, entity_id, details) VALUES ($1, 'update_request', 'service_request', $2, $3::jsonb)", [req.user.id, req.params.id, JSON.stringify({ status, assignedEmployeeId: assignedEmployeeId ?? null })]);
+    return res.json({ data: updated.rows[0] });
+  } catch (error) { return next(error); }
+});
+
 export default router;
