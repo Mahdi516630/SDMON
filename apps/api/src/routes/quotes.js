@@ -24,6 +24,7 @@ router.get('/', async (req, res, next) => {
 router.post('/', requireRole('admin', 'employee'), async (req, res, next) => {
   const { clientId, requestId = null, currency = 'DJF', validUntil = null, notes = null, items } = req.body ?? {};
   if (!/^[0-9a-f-]{36}$/i.test(clientId || '') || !['DJF', 'USD'].includes(currency) || !Array.isArray(items) || items.length < 1 || items.length > 50) return res.status(400).json({ error: 'Client, currency and 1-50 quote items are required' });
+  if (req.user.role === 'employee' && !requestId) return res.status(403).json({ error: 'Employees may only quote requests assigned to them' });
   if (validUntil && !/^\d{4}-\d{2}-\d{2}$/.test(validUntil)) return res.status(400).json({ error: 'Invalid validity date' });
   let subtotal = 0; let taxTotal = 0;
   const normalized = [];
