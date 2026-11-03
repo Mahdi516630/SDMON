@@ -27,5 +27,9 @@ Authentication is designed for Neon Managed Auth JWTs. Set `NEON_AUTH_JWKS_URL` 
 - `GET /api/v1/clients` — admin/employee only.
 - `GET /api/v1/clients/me` — client self-profile only.
 - `GET /api/v1/services` — authenticated users.
+- `GET /api/v1/requests` — all requests for admins, assigned requests for employees, own requests for clients.
+- `POST /api/v1/requests` — clients create service requests.
+- `GET /api/v1/quotes`, `GET /api/v1/invoices`, `GET /api/v1/payments`, `GET /api/v1/delivery-notes` — role-scoped document views.
+- `POST /api/v1/payments` — admin/employee manual payment entry with invoice locking, outstanding-balance validation and audit event.
 
 This is an initial protected API foundation, not a production-ready business system. Sign-up, invitation and role assignment workflows, audit writes, document lifecycle, payment recording and full authorization tests remain to be implemented and verified before real business data is used.
