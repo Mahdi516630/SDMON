@@ -15,16 +15,23 @@ function toCents(value) {
 
 router.get('/', async (req, res, next) => {
   try {
-    const isClient = req.user.role === 'client';
-    const sql = `SELECT p.id, p.payment_number, p.invoice_id, p.amount, p.currency,
-                        p.payment_method, p.payment_date, p.reference,
-                        i.invoice_number, c.contact_name
-                 FROM payments p
-                 JOIN invoices i ON i.id = p.invoice_id
-                 JOIN clients c ON c.id = i.client_id
-                 ${isClient ? 'WHERE c.user_id = $1' : ''}
-                 ORDER BY p.payment_date DESC, p.created_at DESC LIMIT 200`;
-    const result = await getPool().query(sql, isClient ? [req.user.id] : []);
+    const role = req.user.role;
+    const where = role === 'client' ? 'WHERE c.user_id = $1'
+      : role === 'employee' ? 'WHERE e.user_id = $1' : '';
+    const result = await getPool().query(
+      `SELECT p.id, p.payment_number, p.invoice_id, p.amount, p.currency,
+              p.payment_method, p.payment_date, p.reference,
+              i.invoice_number, c.contact_name
+       FROM payments p
+       JOIN invoices i ON i.id = p.invoice_id
+       JOIN clients c ON c.id = i.client_id
+       LEFT JOIN quotes q ON q.id = i.quote_id
+       LEFT JOIN service_requests r ON r.id = q.request_id
+       LEFT JOIN employees e ON e.id = r.assigned_employee_id
+       ${where}
+       ORDER BY p.payment_date DESC, p.created_at DESC LIMIT 200`,
+      where ? [req.user.id] : [],
+    );
     res.json({ data: result.rows });
   } catch (error) { next(error); }
 });
@@ -47,8 +54,15 @@ router.post('/', requireRole('admin', 'employee'), async (req, res, next) => {
   try {
     await client.query('BEGIN');
     const invoiceResult = await client.query(
-      'SELECT id, total, status FROM invoices WHERE id = $1 FOR UPDATE',
-      [invoiceId],
+      `SELECT i.id, i.total, i.status
+       FROM invoices i
+       LEFT JOIN quotes q ON q.id = i.quote_id
+       LEFT JOIN service_requests r ON r.id = q.request_id
+       LEFT JOIN employees e ON e.id = r.assigned_employee_id
+       WHERE i.id = $1
+         AND ($2::text = 'admin' OR e.user_id = $3)
+       FOR UPDATE OF i`,
+      [invoiceId, req.user.role, req.user.id],
     );
     const invoice = invoiceResult.rows[0];
     if (!invoice || ['draft', 'cancelled'].includes(invoice.status)) {
