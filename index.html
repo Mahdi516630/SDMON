@@ -2222,6 +2222,49 @@ showStep(1);
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeDevisModal();
 });
+
+// Close modal on ESC
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeDevisModal();
+});
+/* ============================================
+   NAV, THEME & FOOTER YEAR
+   ============================================ */
+document.querySelectorAll('#navLinks a').forEach(a => {
+  a.addEventListener('click', () => document.getElementById('navLinks').classList.remove('open'));
+});
+
+(function initTheme() {
+  // Mode clair par défaut. Le choix de l'utilisateur est mémorisé, la préférence du système est ignorée.
+  const root = document.documentElement;
+  const btn = document.getElementById('themeToggle');
+  const metaColor = document.getElementById('metaThemeColor');
+
+  function applyTheme(theme) {
+    root.setAttribute('data-theme', theme);
+    if (metaColor) metaColor.setAttribute('content', theme === 'dark' ? '#061431' : '#ffffff');
+    if (btn) {
+      const label = theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre';
+      btn.setAttribute('aria-label', label);
+      btn.setAttribute('title', label);
+      btn.setAttribute('aria-pressed', String(theme === 'dark'));
+    }
+  }
+
+  let current = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  applyTheme(current);
+
+  if (btn) {
+    btn.addEventListener('click', () => {
+      current = current === 'dark' ? 'light' : 'dark';
+      applyTheme(current);
+      try { localStorage.setItem('sdmon_theme', current); } catch (e) {}
+    });
+  }
+  const y = document.getElementById('year');
+  if (y) y.textContent = new Date().getFullYear();
+})();
+
 </script>
 
 </body>
