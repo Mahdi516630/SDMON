@@ -7,9 +7,15 @@ router.use(requireAuth);
 
 router.get('/', requireRole('admin', 'employee'), async (req, res, next) => {
   try {
-    const { rows } = await getPool().query(
-      'SELECT id, client_number, company_name, contact_name, email, phone, created_at FROM clients ORDER BY created_at DESC LIMIT 200',
-    );
+    const sql = req.user.role === 'admin'
+      ? 'SELECT id, client_number, company_name, contact_name, email, phone, created_at FROM clients ORDER BY created_at DESC LIMIT 200'
+      : `SELECT DISTINCT c.id, c.client_number, c.company_name, c.contact_name, c.email, c.phone, c.created_at
+         FROM clients c
+         JOIN service_requests r ON r.client_id = c.id
+         JOIN employees e ON e.id = r.assigned_employee_id
+         WHERE e.user_id = $1
+         ORDER BY c.created_at DESC LIMIT 200`;
+    const { rows } = await getPool().query(sql, req.user.role === 'admin' ? [] : [req.user.id]);
     res.json({ data: rows });
   } catch (error) { next(error); }
 });
