@@ -4,7 +4,7 @@ const authUrl = import.meta.env.VITE_NEON_AUTH_URL;
 if (!authUrl) console.warn('VITE_NEON_AUTH_URL is not configured');
 export const authClient = createAuthClient(authUrl);
 
-const apiBase = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000').replace(/\/$/, '');
+// VITE_API_BASE_URL must be the API origin (or an origin ending in /api/v1).\n// Normalize it so api() never produces /api/v1/api/v1/... .\nconst configuredApiBase = (import.meta.env.VITE_API_BASE_URL || 'https://sdmon-app-api-dev.onrender.com').trim().replace(/\\/$/, '');\nconst apiBase = configuredApiBase.replace(/\\/api\\/v1$/i, '');
 const REQUEST_TIMEOUT_MS = 12000;
 
 function withTimeout(promise, label) {
@@ -51,7 +51,7 @@ export async function api(path, options = {}) {
       },
     });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.error || `Erreur API (${response.status})`);
+    if (!response.ok) throw new Error(`${body.error || `Erreur API (${response.status})`} — ${response.status} sur ${apiBase}/api/v1${path}`);
     return body;
   } catch (error) {
     if (error.name === 'AbortError') throw new Error(`Délai dépassé : le serveur SDMON ne répond pas pour ${path}. Vérifiez l'API et sa connexion à la base Neon.`);
