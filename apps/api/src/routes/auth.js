@@ -8,8 +8,9 @@ router.post('/register-client', requireIdentity, async (req, res, next) => {
   const email = String(req.body?.email ?? req.authIdentity.email ?? '').trim().toLowerCase();
   const companyName = String(req.body?.companyName ?? '').trim() || null;
   const phone = String(req.body?.phone ?? '').trim() || null;
+  if (!req.authIdentity.email) return res.status(401).json({ error: 'A verified email identity is required' });
   if (fullName.length < 2 || fullName.length > 160 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'A valid full name and email are required' });
-  if (req.authIdentity.email && email !== req.authIdentity.email) return res.status(400).json({ error: 'Email must match the verified identity' });
+  if (email !== req.authIdentity.email) return res.status(400).json({ error: 'Email must match the verified identity' });
   const client = await getPool().connect();
   try {
     await client.query('BEGIN');
