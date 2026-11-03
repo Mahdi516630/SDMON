@@ -12,6 +12,7 @@ import paymentRoutes from './routes/payments.js';
 import quoteRoutes from './routes/quotes.js';
 import requestRoutes from './routes/requests.js';
 import serviceRoutes from './routes/services.js';
+import { getPool } from './config/database.js';
 
 const app = express();
 const port = Number.parseInt(process.env.PORT ?? '4000', 10);
@@ -21,7 +22,15 @@ app.use(helmet());
 app.use(cors({ origin(origin, callback) { if (!origin || allowedOrigins.includes(origin)) return callback(null, true); return callback(new Error('Origin not allowed by CORS')); } }));
 app.use(express.json({ limit: '1mb' }));
 app.get('/', (_req, res) => res.json({ service: 'sdmon-api', status: 'online', health: '/api/v1/health' }));
-app.get('/api/v1/health', (_req, res) => res.json({ service: 'sdmon-api', status: 'ok', timestamp: new Date().toISOString() }));
+app.get('/api/v1/health', async (_req, res) => {
+  try {
+    await getPool().query('SELECT 1');
+    return res.json({ service: 'sdmon-api', status: 'ok', database: { provider: 'Neon', status: 'connected' }, timestamp: new Date().toISOString() });
+  } catch (error) {
+    console.error('Database health check failed:', error.message);
+    return res.status(503).json({ service: 'sdmon-api', status: 'degraded', database: { provider: 'Neon', status: 'disconnected' }, timestamp: new Date().toISOString() });
+  }
+});
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/clients', clientRoutes);
