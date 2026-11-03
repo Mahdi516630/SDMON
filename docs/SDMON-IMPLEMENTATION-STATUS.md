@@ -15,6 +15,7 @@ Branche : `feature/sdmon-app`
 - [x] Profils client, employés, catalogue des services et demandes avec accès filtré.
 - [x] Consultation des devis, factures, paiements et bons de livraison avec filtrage par rôle.
 - [x] Enregistrement transactionnel des paiements manuels, protection contre le dépassement du solde et journalisation de l'opération.
+- [x] Workflow CI isolé pour contrôler la syntaxe de l'API et construire le portail, sans déploiement.
 
 ## Inventaire Neon — lecture seule
 
@@ -28,6 +29,7 @@ Le projet Neon `sdmon.io` a une branche par défaut `production` actuellement ar
 - [ ] Création/invitation contrôlée des utilisateurs et attribution du premier administrateur.
 - [ ] CRUD complet clients, employés et services.
 - [ ] Création et cycle de vie des devis, factures et bons de livraison.
+- [ ] Résultat du premier passage CI (workflow ajouté, exécution encore à confirmer).
 - [ ] Tests automatisés, tests IDOR et tests de sécurité inter-rôles.
 - [ ] Installation des dépendances et exécution réelle de l'API et du portail.
 - [ ] Audit du compte Render et préproduction.
