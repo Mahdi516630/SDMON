@@ -1,106 +1,179 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { api, apiBase, authClient } from './api.js';
 import './styles.css';
 
 const navigation = [
-  { id: 'overview', label: 'Vue générale', icon: '▦' },
-  { id: 'clients', label: 'Clients', icon: '◉' },
-  { id: 'employees', label: 'Employés', icon: '♙' },
-  { id: 'services', label: 'Services', icon: '◇' },
-  { id: 'requests', label: 'Demandes', icon: '▤' },
-  { id: 'quotes', label: 'Devis', icon: '▧' },
-  { id: 'invoices', label: 'Factures', icon: '▣' },
-  { id: 'payments', label: 'Paiements', icon: '↗' },
+  { id: 'overview', label: 'Vue générale', roles: ['admin', 'employee', 'client'] },
+  { id: 'clients', label: 'Clients', roles: ['admin', 'employee'] },
+  { id: 'employees', label: 'Employés', roles: ['admin'] },
+  { id: 'services', label: 'Services', roles: ['admin', 'employee', 'client'] },
+  { id: 'requests', label: 'Demandes', roles: ['admin', 'employee', 'client'] },
+  { id: 'quotes', label: 'Devis', roles: ['admin', 'employee', 'client'] },
+  { id: 'invoices', label: 'Factures', roles: ['admin', 'employee', 'client'] },
+  { id: 'delivery-notes', label: 'Bons de livraison', roles: ['admin', 'employee', 'client'] },
+  { id: 'payments', label: 'Paiements', roles: ['admin', 'employee', 'client'] },
 ];
 
-const moduleDetails = {
-  clients: ['Gestion des clients', 'Fiches clients, coordonnées et historique commercial.'],
-  employees: ['Gestion des employés', 'Comptes, fonctions, affectations et statuts.'],
-  services: ['Catalogue des services', 'Prestations, descriptions et tarifs en FDJ.'],
-  requests: ['Demandes de service', 'Réception, affectation et suivi des demandes.'],
-  quotes: ['Devis', 'Création, validation, numérotation et export PDF.'],
-  invoices: ['Factures et livraisons', 'Facturation, bons de livraison et suivi des soldes.'],
-  payments: ['Paiements manuels', 'Enregistrement des espèces, virements et autres règlements.'],
+const resources = {
+  clients: { title: 'Clients', path: '/clients', columns: ['client_number', 'company_name', 'contact_name', 'email', 'phone'] },
+  employees: { title: 'Employés', path: '/employees', columns: ['employee_number', 'full_name', 'email', 'job_title', 'employment_status'] },
+  services: { title: 'Catalogue des services', path: '/services', columns: ['code', 'name_fr', 'unit', 'default_unit_price', 'currency'] },
+  requests: { title: 'Demandes de service', path: '/requests', columns: ['request_number', 'title', 'service_name', 'status', 'requested_at'] },
+  quotes: { title: 'Devis', path: '/quotes', columns: ['quote_number', 'contact_name', 'status', 'issue_date', 'total', 'currency'] },
+  invoices: { title: 'Factures', path: '/invoices', columns: ['invoice_number', 'contact_name', 'status', 'issue_date', 'total', 'amount_paid', 'currency'] },
+  'delivery-notes': { title: 'Bons de livraison', path: '/delivery-notes', columns: ['delivery_number', 'contact_name', 'status', 'delivery_date', 'invoice_id'] },
+  payments: { title: 'Paiements', path: '/payments', columns: ['payment_number', 'invoice_number', 'amount', 'currency', 'payment_method', 'payment_date'] },
 };
 
+function AuthScreen({ onAuthenticated }) {
+  const [mode, setMode] = useState('signin');
+  const [form, setForm] = useState({ name: '', email: '', password: '', companyName: '', phone: '' });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const change = (key) => (event) => setForm((old) => ({ ...old, [key]: event.target.value }));
+
+  async function submit(event) {
+    event.preventDefault(); setBusy(true); setError('');
+    try {
+      const result = mode === 'signup'
+        ? await authClient.signUp.email({ email: form.email, password: form.password, name: form.name })
+        : await authClient.signIn.email({ email: form.email, password: form.password });
+      if (result.error) throw new Error(result.error.message || 'Échec de connexion');
+      if (mode === 'signup') {
+        await api('/auth/register-client', { method: 'POST', body: JSON.stringify({ fullName: form.name, email: form.email, companyName: form.companyName, phone: form.phone }) });
+      }
+      await onAuthenticated();
+    } catch (err) { setError(err.message || 'Une erreur est survenue'); }
+    finally { setBusy(false); }
+  }
+
+  return <main className="auth-page"><form className="auth-card" onSubmit={submit}>
+    <div className="brand auth-brand"><span className="brand-mark">S</span><span>SDMON <small>BUSINESS SPACE</small></span></div>
+    <p className="eyebrow">ESPACE SÉCURISÉ</p><h1>{mode === 'signin' ? 'Connexion' : 'Créer un compte client'}</h1>
+    <p className="auth-subtitle">Accédez à vos services et à votre espace de gestion SDMON.</p>
+    {mode === 'signup' && <><label>Nom complet<input required value={form.name} onChange={change('name')} autoComplete="name" /></label><label>Entreprise (facultatif)<input value={form.companyName} onChange={change('companyName')} /></label><label>Téléphone<input value={form.phone} onChange={change('phone')} /></label></>}
+    <label>Adresse e-mail<input required type="email" value={form.email} onChange={change('email')} autoComplete="email" /></label>
+    <label>Mot de passe<input required minLength="8" type="password" value={form.password} onChange={change('password')} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} /></label>
+    {error && <p className="error-message" role="alert">{error}</p>}
+    <button className="primary-button" disabled={busy}>{busy ? 'Veuillez patienter…' : mode === 'signin' ? 'Se connecter' : 'Créer mon compte'}</button>
+    <button type="button" className="text-button" onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(''); }}>{mode === 'signin' ? 'Créer un compte client' : 'Déjà inscrit ? Se connecter'}</button>
+  </form></main>;
+}
+
+function DataTable({ rows, columns }) {
+  if (!rows?.length) return <div className="empty-state">Aucune donnée disponible pour le moment.</div>;
+  const label = (key) => key.replaceAll('_', ' ').replace(/\b\w/g, (m) => m.toUpperCase());
+  return <div className="table-wrap"><table><thead><tr>{columns.map((key) => <th key={key}>{label(key)}</th>)}</tr></thead>
+    <tbody>{rows.map((row, index) => <tr key={row.id || index}>{columns.map((key) => <td key={key}>{row[key] == null ? '—' : String(row[key])}</td>)}</tr>)}</tbody></table></div>;
+}
+
 function App() {
+  const [sessionUser, setSessionUser] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [active, setActive] = useState('overview');
-  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
-  const activeLabel = navigation.find((item) => item.id === active)?.label ?? 'Vue générale';
+  const [rows, setRows] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [requestForm, setRequestForm] = useState({ title: '', description: '', serviceId: '' });
+  const [paymentForm, setPaymentForm] = useState({ invoiceId: '', amount: '', paymentMethod: 'cash', paymentDate: new Date().toISOString().slice(0, 10), reference: '' });
 
-  return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <a className="brand" href="/" aria-label="SDMON">
-          <span className="brand-mark">S</span>
-          <span>SDMON <small>BUSINESS SPACE</small></span>
-        </a>
-        <p className="nav-caption">ESPACE DE TRAVAIL</p>
-        <nav aria-label="Navigation principale">
-          {navigation.map((item) => (
-            <button key={item.id} className={active === item.id ? 'nav-item active' : 'nav-item'} onClick={() => setActive(item.id)}>
-              <span className="nav-icon">{item.icon}</span>{item.label}
-            </button>
-          ))}
-        </nav>
-        <div className="sidebar-bottom">
-          <span className="profile-avatar">M</span>
-          <span><strong>Administration</strong><small>Compte de démonstration</small></span>
-        </div>
-      </aside>
+  const loadProfile = useCallback(async () => {
+    const session = await authClient.getSession();
+    const user = session.data?.user || session.data?.session?.user || null;
+    setSessionUser(user);
+    if (!user) { setProfile(null); return; }
+    const linked = await api('/auth/unlinked-identity');
+    if (!linked.data.linked) { setProfile({ unlinked: true, email: linked.data.email || user.email, name: linked.data.name || user.name }); return; }
+    const me = await api('/auth/me');
+    setProfile(me.data);
+  }, []);
 
-      <main className="workspace">
-        <header className="workspace-header">
-          <div><span className="breadcrumb">SDMON / {activeLabel}</span><h1>{active === 'overview' ? 'Tableau de bord' : moduleDetails[active]?.[0]}</h1></div>
-          <span className="dev-tag"><i /> PRÉVISUALISATION</span>
-        </header>
+  useEffect(() => { loadProfile().catch((err) => setError(err.message)); }, [loadProfile]);
 
-        {active === 'overview' ? (
-          <>
-            <section className="welcome-panel">
-              <div><p className="eyebrow">GESTION INTÉGRÉE SDMON</p><h2>Bonjour, bienvenue dans votre espace.</h2><p>Retrouvez progressivement vos opérations commerciales et administratives dans un seul outil.</p></div>
-              <div className="welcome-mark">S</div>
-            </section>
-            <section className="metrics">
-              <article><span>Clients</span><strong>—</strong><small>En attente de connexion</small></article>
-              <article><span>Employés actifs</span><strong>—</strong><small>En attente de connexion</small></article>
-              <article><span>Demandes ouvertes</span><strong>—</strong><small>En attente de connexion</small></article>
-              <article><span>Factures émises</span><strong>—</strong><small>En attente de connexion</small></article>
-            </section>
-            <section className="content-grid">
-              <article className="panel">
-                <div className="panel-heading"><div><h3>Modules de gestion</h3><p>Accès aux principales fonctions SDMON</p></div><span className="soft-label">7 modules</span></div>
-                <div className="quick-links">
-                  {navigation.slice(1).map((item) => (
-                    <button key={item.id} onClick={() => setActive(item.id)}><span>{item.icon}</span><strong>{item.label}</strong><b>›</b></button>
-                  ))}
-                </div>
-              </article>
-              <article className="panel system-panel">
-                <h3>État de la plateforme</h3>
-                <p>Interface isolée du site public. Les données réelles ne sont pas encore connectées.</p>
-                <div className="system-line"><span>Interface</span><strong className="ok">Initialisée</strong></div>
-                <div className="system-line"><span>API</span><strong>À configurer</strong></div>
-                <div className="system-line"><span>Base de données</span><strong>En attente de validation</strong></div>
-                <div className="system-line"><span>Authentification</span><strong>À configurer</strong></div>
-              </article>
-            </section>
-          </>
-        ) : (
-          <section className="module-placeholder">
-            <div className="placeholder-icon">{navigation.find((item) => item.id === active)?.icon}</div>
-            <p className="eyebrow">MODULE SDMON</p>
-            <h2>{moduleDetails[active]?.[0]}</h2>
-            <p>{moduleDetails[active]?.[1]}</p>
-            <span className="soft-label">Structure préparée · Développement en cours</span>
-            <button className="back-button" onClick={() => setActive('overview')}>Retour au tableau de bord</button>
-          </section>
-        )}
+  const visibleNavigation = useMemo(() => navigation.filter((item) => !profile || item.roles.includes(profile.role)), [profile]);
 
-        <footer className="workspace-footer"><span>SDMON · Développements, maintenances et outils numériques</span><span>API cible : {apiUrl}</span></footer>
-      </main>
-    </div>
-  );
+  const loadModule = useCallback(async () => {
+    if (!profile || profile.unlinked) return;
+    setLoading(true); setError('');
+    try {
+      if (active === 'overview') {
+        if (profile.role === 'admin') setSummary(await api('/dashboard/summary'));
+        else setSummary(null);
+        setRows([]);
+      } else {
+        const resource = resources[active];
+        if (!resource) return;
+        const result = await api(resource.path);
+        setRows(result.data || []);
+      }
+      if (active === 'services' || active === 'overview') {
+        const result = await api('/services'); setServices(result.data || []);
+      }
+    } catch (err) { setError(err.message); setRows([]); }
+    finally { setLoading(false); }
+  }, [active, profile]);
+
+  useEffect(() => { loadModule(); }, [loadModule]);
+
+  async function signOut() {
+    await authClient.signOut();
+    setSessionUser(null); setProfile(null); setSummary(null); setRows([]);
+  }
+
+  async function submitRequest(event) {
+    event.preventDefault(); setError('');
+    try {
+      await api('/requests', { method: 'POST', body: JSON.stringify(requestForm) });
+      setRequestForm({ title: '', description: '', serviceId: '' }); await loadModule();
+    } catch (err) { setError(err.message); }
+  }
+
+  async function submitPayment(event) {
+    event.preventDefault(); setError('');
+    try {
+      await api('/payments', { method: 'POST', body: JSON.stringify(paymentForm) });
+      setPaymentForm({ invoiceId: '', amount: '', paymentMethod: 'cash', paymentDate: new Date().toISOString().slice(0, 10), reference: '' });
+      await loadModule();
+    } catch (err) { setError(err.message); }
+  }
+
+  if (!sessionUser) return <AuthScreen onAuthenticated={loadProfile} />;
+  if (!profile) return <main className="auth-page"><div className="auth-card">Chargement du profil…</div></main>;
+  if (profile.unlinked) return <main className="auth-page"><section className="auth-card"><h1>Compte non activé</h1><p>Votre identité est authentifiée, mais aucun rôle SDMON ne lui est attribué. Contactez l'administrateur pour activer votre compte employé ou administrateur.</p><p>{profile.email}</p><button className="primary-button" onClick={signOut}>Se déconnecter</button></section></main>;
+
+  const activeLabel = visibleNavigation.find((item) => item.id === active)?.label || 'Vue générale';
+  const resource = resources[active];
+
+  return <div className="app-shell">
+    <aside className="sidebar">
+      <a className="brand" href="/" aria-label="SDMON"><span className="brand-mark">S</span><span>SDMON <small>BUSINESS SPACE</small></span></a>
+      <p className="nav-caption">ESPACE DE TRAVAIL</p>
+      <nav aria-label="Navigation principale">{visibleNavigation.map((item) => <button key={item.id} className={active === item.id ? 'nav-item active' : 'nav-item'} onClick={() => setActive(item.id)}>{item.label}</button>)}</nav>
+      <div className="sidebar-bottom"><span className="profile-avatar">{(profile.fullName || profile.email || 'U').slice(0, 1).toUpperCase()}</span><span><strong>{profile.fullName || profile.email}</strong><small>{profile.role}</small></span><button className="logout-button" onClick={signOut}>Quitter</button></div>
+    </aside>
+    <main className="workspace">
+      <header className="workspace-header"><div><span className="breadcrumb">SDMON / {activeLabel}</span><h1>{active === 'overview' ? 'Tableau de bord' : resource?.title}</h1></div><span className="dev-tag"><i /> CONNECTÉ</span></header>
+      {error && <p className="error-message page-error" role="alert">{error}</p>}
+      {active === 'overview' ? <><section className="welcome-panel"><div><p className="eyebrow">GESTION INTÉGRÉE SDMON</p><h2>Bienvenue, {profile.fullName || 'utilisateur'}.</h2><p>Votre espace SDMON est connecté à l'API de gestion.</p></div><div className="welcome-mark">S</div></section>
+        {profile.role === 'admin' && <section className="metrics">
+          <article><span>Clients</span><strong>{summary?.clients ?? '—'}</strong><small>Comptes clients</small></article>
+          <article><span>Employés actifs</span><strong>{summary?.activeEmployees ?? '—'}</strong><small>Effectif actif</small></article>
+          <article><span>Demandes ouvertes</span><strong>{summary?.openRequests ?? '—'}</strong><small>À traiter</small></article>
+          <article><span>Factures émises</span><strong>{summary?.issuedInvoices ?? '—'}</strong><small>Hors brouillons</small></article>
+        </section>}
+        <section className="panel"><div className="panel-heading"><div><h3>Accès rapides</h3><p>Modules autorisés pour votre rôle : {profile.role}</p></div></div><div className="quick-links">{visibleNavigation.filter((item) => item.id !== 'overview').map((item) => <button key={item.id} onClick={() => setActive(item.id)}><strong>{item.label}</strong><b>›</b></button>)}</div></section>
+      </> : <section className="panel">
+        <div className="panel-heading"><div><h3>{resource?.title}</h3><p>Données chargées depuis la base SDMON</p></div><button className="secondary-button" onClick={loadModule}>Actualiser</button></div>
+        {active === 'requests' && profile.role === 'client' && <form className="inline-form" onSubmit={submitRequest}><h3>Nouvelle demande</h3><label>Titre<input required minLength="3" value={requestForm.title} onChange={(e) => setRequestForm({ ...requestForm, title: e.target.value })} /></label><label>Service<select value={requestForm.serviceId} onChange={(e) => setRequestForm({ ...requestForm, serviceId: e.target.value })}><option value="">Non précisé</option>{services.map((s) => <option key={s.id} value={s.id}>{s.name_fr}</option>)}</select></label><label>Description<textarea value={requestForm.description} onChange={(e) => setRequestForm({ ...requestForm, description: e.target.value })} /></label><button className="primary-button">Envoyer la demande</button></form>}
+        {active === 'payments' && ['admin', 'employee'].includes(profile.role) && <form className="inline-form" onSubmit={submitPayment}><h3>Enregistrer un paiement</h3><p>Le paiement est rapproché d'une facture existante ; le dépassement du solde est refusé par l'API.</p><label>ID de facture<input required value={paymentForm.invoiceId} onChange={(e) => setPaymentForm({ ...paymentForm, invoiceId: e.target.value })} /></label><label>Montant<input required type="number" min="0.01" step="0.01" value={paymentForm.amount} onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })} /></label><label>Méthode<select value={paymentForm.paymentMethod} onChange={(e) => setPaymentForm({ ...paymentForm, paymentMethod: e.target.value })}><option value="cash">Espèces</option><option value="bank_transfer">Virement</option><option value="cheque">Chèque</option><option value="mobile_money">Mobile money</option><option value="other">Autre</option></select></label><label>Date<input type="date" value={paymentForm.paymentDate} onChange={(e) => setPaymentForm({ ...paymentForm, paymentDate: e.target.value })} /></label><label>Référence<input value={paymentForm.reference} onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })} /></label><button className="primary-button">Enregistrer</button></form>}
+        {loading ? <div className="empty-state">Chargement…</div> : <DataTable rows={rows} columns={resource?.columns || []} />}
+      </section>}
+      <footer className="workspace-footer"><span>SDMON · Développements, maintenances et outils numériques</span><span>API : {apiBase}</span></footer>
+    </main>
+  </div>;
 }
 
 createRoot(document.getElementById('root')).render(<App />);
