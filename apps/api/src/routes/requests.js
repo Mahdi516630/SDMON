@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
 import { getPool } from '../config/database.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
@@ -56,6 +57,9 @@ router.post('/', requireRole('client'), async (req, res, next) => {
   if (description !== null && (typeof description !== 'string' || description.length > 5000)) {
     return res.status(400).json({ error: 'Invalid request description' });
   }
+  if (serviceId !== null && (typeof serviceId !== 'string' || !/^[0-9a-f-]{36}$/i.test(serviceId))) {
+    return res.status(400).json({ error: 'Invalid serviceId' });
+  }
 
   const db = getPool();
   const client = await db.connect();
@@ -66,7 +70,14 @@ router.post('/', requireRole('client'), async (req, res, next) => {
       await client.query('ROLLBACK');
       return res.status(403).json({ error: 'Client profile not configured' });
     }
-    const requestNumber = `REQ-${Date.now()}`;
+    if (serviceId) {
+      const service = await client.query('SELECT id FROM services WHERE id = $1 AND is_active = true', [serviceId]);
+      if (!service.rows[0]) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Selected service is unavailable' });
+      }
+    }
+    const requestNumber = `REQ-${randomUUID().slice(0, 8).toUpperCase()}`;
     const created = await client.query(
       `INSERT INTO service_requests (request_number, client_id, service_id, title, description)
        VALUES ($1, $2, $3, $4, $5)
@@ -79,10 +90,10 @@ router.post('/', requireRole('client'), async (req, res, next) => {
       [req.user.id, created.rows[0].id],
     );
     await client.query('COMMIT');
-    res.status(201).json({ data: created.rows[0] });
+    return res.status(201).json({ data: created.rows[0] });
   } catch (error) {
     await client.query('ROLLBACK');
-    next(error);
+    return next(error);
   } finally {
     client.release();
   }
