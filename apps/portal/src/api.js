@@ -20,23 +20,16 @@ function withTimeout(promise, label) {
 export async function api(path, options = {}) {
   let tokenResult;
   try {
-    // Neon Auth's token() method returns a short-lived JWT and refreshes it
-    // when needed. getSession() is for session/user state, not API bearer auth.
+    // Neon Auth exposes getJWTToken() for obtaining the JWT used by our API.
     tokenResult = await withTimeout(
-      authClient.token(),
+      authClient.getJWTToken(),
       'Délai dépassé pendant la récupération du jeton Neon Auth. Rechargez la page puis reconnectez-vous.'
     );
   } catch (error) {
     throw new Error(error.message || 'Impossible de récupérer le jeton Neon Auth.');
   }
 
-  const token =
-    (typeof tokenResult === 'string' ? tokenResult : null) ??
-    tokenResult?.data?.token ??
-    tokenResult?.data?.access_token ??
-    tokenResult?.token ??
-    tokenResult?.access_token ??
-    null;
+  const token = typeof tokenResult === 'string' ? tokenResult : null;
 
   if (tokenResult?.error) {
     throw new Error(tokenResult.error.message || 'La session Neon Auth est invalide. Veuillez vous reconnecter.');
