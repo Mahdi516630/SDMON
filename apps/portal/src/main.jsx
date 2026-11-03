@@ -28,16 +28,35 @@ const resources = {
 };
 
 function AuthScreen({ onAuthenticated, adminOnly = false }) {
-  const [mode, setMode] = useState('signin');
+  const resetToken = new URLSearchParams(window.location.search).get('token');
+  const [mode, setMode] = useState(resetToken ? 'reset' : 'signin');
   const [form, setForm] = useState({ name: '', email: '', password: '', companyName: '', phone: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const change = (key) => (event) => setForm((old) => ({ ...old, [key]: event.target.value }));
 
   async function submit(event) {
     event.preventDefault(); setBusy(true); setError('');
     try {
-      const result = mode === 'signup'
+      let result;
+      if (mode === 'forgot') {
+        result = await authClient.requestPasswordReset({ email: form.email, redirectTo: `${window.location.origin}/admin` });
+        if (result.error) throw new Error(result.error.message || 'Impossible d’envoyer le lien de réinitialisation');
+        setNotice('Si cette adresse existe, un lien de réinitialisation a été envoyé. Consulte ta boîte mail.');
+        setMode('signin');
+        return;
+      }
+      if (mode === 'reset') {
+        result = await authClient.resetPassword({ newPassword: form.password, token: resetToken });
+        if (result.error) throw new Error(result.error.message || 'Lien de réinitialisation invalide ou expiré');
+        setNotice('Mot de passe mis à jour. Tu peux maintenant te connecter.');
+        window.history.replaceState({}, '', '/admin');
+        setMode('signin');
+        setForm((old) => ({ ...old, password: '' }));
+        return;
+      }
+      result = mode === 'signup'
         ? await authClient.signUp.email({ email: form.email, password: form.password, name: form.name })
         : await authClient.signIn.email({ email: form.email, password: form.password });
       if (result.error) throw new Error(result.error.message || 'Échec de connexion');
@@ -57,10 +76,12 @@ function AuthScreen({ onAuthenticated, adminOnly = false }) {
     <p className="auth-subtitle">Accédez à vos services et à votre espace de gestion SDMON.</p>
     {mode === 'signup' && <><label>Nom complet<input required value={form.name} onChange={change('name')} autoComplete="name" /></label><label>Entreprise (facultatif)<input value={form.companyName} onChange={change('companyName')} /></label><label>Téléphone<input value={form.phone} onChange={change('phone')} /></label></>}
     <label>Adresse e-mail<input required type="email" value={form.email} onChange={change('email')} autoComplete="email" /></label>
-    <label>Mot de passe<input required minLength="8" type="password" value={form.password} onChange={change('password')} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} /></label>
+    {mode !== 'forgot' && <label>{mode === 'reset' ? 'Nouveau mot de passe' : 'Mot de passe'}<input required minLength="8" type="password" value={form.password} onChange={change('password')} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} /></label>}
+    {notice && <p className="success-message" role="status">{notice}</p>}
     {error && <p className="error-message" role="alert">{error}</p>}
-    <button className="primary-button" disabled={busy}>{busy ? 'Veuillez patienter…' : mode === 'signin' ? 'Se connecter' : (adminOnly ? 'Créer le compte administrateur' : 'Créer mon compte client')}</button>
-    <button type="button" className="text-button" onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(''); }}>{mode === 'signin' ? (adminOnly ? 'Créer le premier compte administrateur' : 'Créer un compte client') : 'Déjà inscrit ? Se connecter'}</button>
+    <button className="primary-button" disabled={busy}>{busy ? 'Veuillez patienter…' : mode === 'signin' ? 'Se connecter' : mode === 'forgot' ? 'Envoyer le lien' : mode === 'reset' ? 'Enregistrer le nouveau mot de passe' : (adminOnly ? 'Créer le compte administrateur' : 'Créer mon compte client')}</button>
+    {mode === 'signin' && <button type="button" className="text-button" onClick={() => { setMode('forgot'); setError(''); setNotice(''); }}>Mot de passe oublié ?</button>}
+    {mode !== 'reset' && <button type="button" className="text-button" onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(''); setNotice(''); }}>{mode === 'signin' ? (adminOnly ? 'Créer le premier compte administrateur' : 'Créer un compte client') : 'Retour à la connexion'}</button>}
   </form></main>;
 }
 
