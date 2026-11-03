@@ -53,13 +53,13 @@ function AuthScreen({ onAuthenticated, adminOnly = false }) {
 
   return <main className="auth-page"><form className="auth-card" onSubmit={submit}>
     <div className="brand auth-brand"><span className="brand-mark">S</span><span>SDMON <small>BUSINESS SPACE</small></span></div>
-    <p className="eyebrow">{adminOnly ? 'ACCÈS ADMINISTRATEUR' : 'ESPACE SÉCURISÉ'}</p><h1>{mode === 'signin' ? (adminOnly ? 'Connexion administrateur' : 'Connexion') : 'Créer un compte client'}</h1>
+    <p className="eyebrow">{adminOnly ? 'ACCÈS ADMINISTRATEUR' : 'ESPACE SÉCURISÉ'}</p><h1>{mode === 'signin' ? (adminOnly ? 'Connexion administrateur' : 'Connexion') : (adminOnly ? 'Créer le premier compte administrateur' : 'Créer un compte client')}</h1>
     <p className="auth-subtitle">Accédez à vos services et à votre espace de gestion SDMON.</p>
     {mode === 'signup' && <><label>Nom complet<input required value={form.name} onChange={change('name')} autoComplete="name" /></label><label>Entreprise (facultatif)<input value={form.companyName} onChange={change('companyName')} /></label><label>Téléphone<input value={form.phone} onChange={change('phone')} /></label></>}
     <label>Adresse e-mail<input required type="email" value={form.email} onChange={change('email')} autoComplete="email" /></label>
     <label>Mot de passe<input required minLength="8" type="password" value={form.password} onChange={change('password')} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} /></label>
     {error && <p className="error-message" role="alert">{error}</p>}
-    <button className="primary-button" disabled={busy}>{busy ? 'Veuillez patienter…' : mode === 'signin' ? 'Se connecter' : 'Créer mon compte'}</button>
+    <button className="primary-button" disabled={busy}>{busy ? 'Veuillez patienter…' : mode === 'signin' ? 'Se connecter' : (adminOnly ? 'Créer le compte administrateur' : 'Créer mon compte client')}</button>
     <button type="button" className="text-button" onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(''); }}>{mode === 'signin' ? (adminOnly ? 'Créer le premier compte administrateur' : 'Créer un compte client') : 'Déjà inscrit ? Se connecter'}</button>
   </form></main>;
 }
