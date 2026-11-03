@@ -18,36 +18,31 @@ function withTimeout(promise, label) {
 }
 
 export async function api(path, options = {}) {
-  let sessionResult;
+  let tokenResult;
   try {
-    sessionResult = await withTimeout(
-      authClient.getSession(),
-      'Délai dépassé pendant la vérification de la session Neon Auth. Rechargez la page puis reconnectez-vous.'
+    // Neon Auth's token() method returns a short-lived JWT and refreshes it
+    // when needed. getSession() is for session/user state, not API bearer auth.
+    tokenResult = await withTimeout(
+      authClient.token(),
+      'Délai dépassé pendant la récupération du jeton Neon Auth. Rechargez la page puis reconnectez-vous.'
     );
   } catch (error) {
-    throw new Error(error.message || 'Impossible de vérifier la session Neon Auth.');
+    throw new Error(error.message || 'Impossible de récupérer le jeton Neon Auth.');
   }
 
-  const data = sessionResult?.data;
-  const session = data?.session ?? data?.data?.session ?? null;
   const token =
-    session?.access_token ??
-    session?.token ??
-    session?.accessToken ??
-    data?.access_token ??
-    data?.token ??
+    (typeof tokenResult === 'string' ? tokenResult : null) ??
+    tokenResult?.data?.token ??
+    tokenResult?.data?.access_token ??
+    tokenResult?.token ??
+    tokenResult?.access_token ??
     null;
 
-  if (sessionResult?.error) {
-    throw new Error(sessionResult.error.message || 'La session Neon Auth est invalide. Veuillez vous reconnecter.');
+  if (tokenResult?.error) {
+    throw new Error(tokenResult.error.message || 'La session Neon Auth est invalide. Veuillez vous reconnecter.');
   }
-  if (!token) {
-    const hasUser = Boolean(data?.user || session?.user || data?.data?.user);
-    throw new Error(
-      hasUser
-        ? 'Session détectée, mais le jeton JWT est absent. Rechargez la page et reconnectez-vous.'
-        : 'Session expirée. Veuillez vous reconnecter.'
-    );
+  if (!token || typeof token !== 'string') {
+    throw new Error('Aucun jeton JWT valide fourni par Neon Auth. Déconnectez-vous puis reconnectez-vous.');
   }
 
   const controller = new AbortController();
