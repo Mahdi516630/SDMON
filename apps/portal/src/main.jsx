@@ -12,7 +12,8 @@ const navigation = [
   { id: 'quotes', label: 'Devis', roles: ['admin', 'employee', 'client'] },
   { id: 'invoices', label: 'Factures', roles: ['admin', 'employee', 'client'] },
   { id: 'delivery-notes', label: 'Bons de livraison', roles: ['admin', 'employee', 'client'] },
-  { id: 'payments', label: 'Paiements', roles: ['admin', 'employee', 'client'] },\n  { id: 'reports', label: 'Rapports financiers', roles: ['admin'] },
+  { id: 'payments', label: 'Paiements', roles: ['admin', 'employee', 'client'] },
+  { id: 'reports', label: 'Rapports financiers', roles: ['admin'] },
 ];
 
 const resources = {
@@ -73,7 +74,8 @@ function App() {
   const [profile, setProfile] = useState(null);
   const [active, setActive] = useState('overview');
   const [rows, setRows] = useState([]);
-  const [summary, setSummary] = useState(null);\n  const [reportData, setReportData] = useState(null);
+  const [summary, setSummary] = useState(null);
+  const [reportData, setReportData] = useState(null);
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -152,7 +154,8 @@ function App() {
       await loadModule();
     } catch (err) { setError(err.message); }
   }
-\n  async function submitPayment(event) {
+
+  async function submitPayment(event) {
     event.preventDefault(); setError('');
     try {
       await api('/payments', { method: 'POST', body: JSON.stringify(paymentForm) });
@@ -178,7 +181,8 @@ function App() {
     <main className="workspace">
       <header className="workspace-header"><div><span className="breadcrumb">SDMON / {activeLabel}</span><h1>{active === 'overview' ? 'Tableau de bord' : active === 'reports' ? 'Rapports financiers' : resource?.title}</h1></div><span className="dev-tag"><i /> CONNECTÉ</span></header>
       {error && <p className="error-message page-error" role="alert">{error}</p>}
-      {active === 'reports' && profile.role === 'admin' ? <section className="panel"><div className="panel-heading"><div><h3>Rapports financiers</h3><p>Les montants sont ventilés par devise ; aucune conversion DJF/USD n'est supposée.</p></div><button className="secondary-button" onClick={loadModule}>Actualiser</button></div><h4>Facturation par devise</h4><DataTable rows={reportData?.invoiced || []} columns={['currency','total']} /><h4>Encaissements par devise</h4><DataTable rows={reportData?.collected || []} columns={['currency','total']} /><h4>Soldes clients restants</h4><DataTable rows={reportData?.outstanding || []} columns={['currency','total']} /><h4>Encaissements mensuels</h4><DataTable rows={reportData?.monthlyCollections || []} columns={['month','currency','total']} /></section> : null}\n      {active === 'overview' ? <><section className="welcome-panel"><div><p className="eyebrow">GESTION INTÉGRÉE SDMON</p><h2>Bienvenue, {profile.fullName || 'utilisateur'}.</h2><p>Votre espace SDMON est connecté à l'API de gestion.</p></div><div className="welcome-mark">S</div></section>
+      {active === 'reports' && profile.role === 'admin' ? <section className="panel"><div className="panel-heading"><div><h3>Rapports financiers</h3><p>Les montants sont ventilés par devise ; aucune conversion DJF/USD n'est supposée.</p></div><button className="secondary-button" onClick={loadModule}>Actualiser</button></div><h4>Facturation par devise</h4><DataTable rows={reportData?.invoiced || []} columns={['currency','total']} /><h4>Encaissements par devise</h4><DataTable rows={reportData?.collected || []} columns={['currency','total']} /><h4>Soldes clients restants</h4><DataTable rows={reportData?.outstanding || []} columns={['currency','total']} /><h4>Encaissements mensuels</h4><DataTable rows={reportData?.monthlyCollections || []} columns={['month','currency','total']} /></section> : null}
+      {active === 'overview' ? <><section className="welcome-panel"><div><p className="eyebrow">GESTION INTÉGRÉE SDMON</p><h2>Bienvenue, {profile.fullName || 'utilisateur'}.</h2><p>Votre espace SDMON est connecté à l'API de gestion.</p></div><div className="welcome-mark">S</div></section>
         {profile.role === 'admin' && <section className="metrics">
           <article><span>Clients</span><strong>{summary?.clients ?? '—'}</strong><small>Comptes clients</small></article>
           <article><span>Employés actifs</span><strong>{summary?.activeEmployees ?? '—'}</strong><small>Effectif actif</small></article>
@@ -199,7 +203,8 @@ function App() {
           <button className="primary-button">Enregistrer</button>
         </form>}
         {active === 'employees' && profile.role === 'admin' && <form className="inline-form" onSubmit={submitModule}><h3>Associer un compte Neon Auth à un rôle SDMON</h3><p>L'utilisateur doit d'abord avoir créé son compte Neon Auth. Renseignez son identifiant de sujet (sub) vérifié.</p><label>Auth subject<input name="authSubject" required /></label><label>E-mail<input name="email" type="email" required /></label><label>Nom complet<input name="fullName" required /></label><label>Rôle<select name="role"><option value="employee">Employé</option><option value="client">Client</option></select></label><label>Téléphone<input name="phone" /></label><label>Fonction<input name="jobTitle" /></label><button className="primary-button">Créer le profil</button></form>}
-\n        {active === 'requests' && profile.role === 'client' && <form className="inline-form" onSubmit={submitRequest}><h3>Nouvelle demande</h3><label>Titre<input required minLength="3" value={requestForm.title} onChange={(e) => setRequestForm({ ...requestForm, title: e.target.value })} /></label><label>Service<select value={requestForm.serviceId} onChange={(e) => setRequestForm({ ...requestForm, serviceId: e.target.value })}><option value="">Non précisé</option>{services.map((s) => <option key={s.id} value={s.id}>{s.name_fr}</option>)}</select></label><label>Description<textarea value={requestForm.description} onChange={(e) => setRequestForm({ ...requestForm, description: e.target.value })} /></label><button className="primary-button">Envoyer la demande</button></form>}
+
+        {active === 'requests' && profile.role === 'client' && <form className="inline-form" onSubmit={submitRequest}><h3>Nouvelle demande</h3><label>Titre<input required minLength="3" value={requestForm.title} onChange={(e) => setRequestForm({ ...requestForm, title: e.target.value })} /></label><label>Service<select value={requestForm.serviceId} onChange={(e) => setRequestForm({ ...requestForm, serviceId: e.target.value })}><option value="">Non précisé</option>{services.map((s) => <option key={s.id} value={s.id}>{s.name_fr}</option>)}</select></label><label>Description<textarea value={requestForm.description} onChange={(e) => setRequestForm({ ...requestForm, description: e.target.value })} /></label><button className="primary-button">Envoyer la demande</button></form>}
         {active === 'payments' && ['admin', 'employee'].includes(profile.role) && <form className="inline-form" onSubmit={submitPayment}><h3>Enregistrer un paiement</h3><p>Le paiement est rapproché d'une facture existante ; le dépassement du solde est refusé par l'API.</p><label>ID de facture<input required value={paymentForm.invoiceId} onChange={(e) => setPaymentForm({ ...paymentForm, invoiceId: e.target.value })} /></label><label>Montant<input required type="number" min="0.01" step="0.01" value={paymentForm.amount} onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })} /></label><label>Méthode<select value={paymentForm.paymentMethod} onChange={(e) => setPaymentForm({ ...paymentForm, paymentMethod: e.target.value })}><option value="cash">Espèces</option><option value="bank_transfer">Virement</option><option value="cheque">Chèque</option><option value="mobile_money">Mobile money</option><option value="other">Autre</option></select></label><label>Date<input type="date" value={paymentForm.paymentDate} onChange={(e) => setPaymentForm({ ...paymentForm, paymentDate: e.target.value })} /></label><label>Référence<input value={paymentForm.reference} onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })} /></label><button className="primary-button">Enregistrer</button></form>}
         {loading ? <div className="empty-state">Chargement…</div> : <DataTable rows={rows} columns={resource?.columns || []} />}
       </section>}
