@@ -70,7 +70,7 @@ function DataTable({ rows, columns }) {
 }
 
 function App() {
-  const adminEntry = window.location.pathname.replace(/\/+$/, '') === '/admin';
+  const adminEntry = window.location.pathname.replace(/\/+$/, '') === '/admin' || new URLSearchParams(window.location.search).get('admin') === '1';
   const [databaseStatus, setDatabaseStatus] = useState('checking');
   const [sessionUser, setSessionUser] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -197,7 +197,7 @@ function App() {
     <aside className="sidebar">
       <a className="brand" href={adminEntry ? '/admin' : '/'} aria-label="SDMON"><span className="brand-mark">S</span><span>SDMON <small>BUSINESS SPACE</small></span></a>
       <p className="nav-caption">ESPACE DE TRAVAIL</p>
-      {profile.role === 'admin' && <a className="admin-shortcut" href="/admin">Accès administrateur</a>}
+      {profile.role === 'admin' && <a className="admin-shortcut" href="/?admin=1">Accès administrateur</a>}
       <nav aria-label="Navigation principale">{visibleNavigation.map((item) => <button key={item.id} className={active === item.id ? 'nav-item active' : 'nav-item'} onClick={() => setActive(item.id)}>{item.label}</button>)}</nav>
       <div className={`neon-status-nav ${databaseStatus === 'connected' ? 'is-connected' : databaseStatus === 'disconnected' ? 'is-disconnected' : 'is-checking'}`}><i /><span><strong>Neon Database</strong><small>{databaseStatus === 'connected' ? 'Connected' : databaseStatus === 'disconnected' ? 'Disconnected' : 'Checking connection…'}</small></span></div>
       <div className="sidebar-bottom"><span className="profile-avatar">{(profile.fullName || profile.email || 'U').slice(0, 1).toUpperCase()}</span><span><strong>{profile.fullName || profile.email}</strong><small>{profile.role}</small></span><button className="logout-button" onClick={signOut}>Quitter</button></div>
