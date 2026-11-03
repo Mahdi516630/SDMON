@@ -41,9 +41,11 @@ function AuthScreen({ onAuthenticated, adminOnly = false }) {
         ? await authClient.signUp.email({ email: form.email, password: form.password, name: form.name })
         : await authClient.signIn.email({ email: form.email, password: form.password });
       if (result.error) throw new Error(result.error.message || 'Échec de connexion');
-      if (mode === 'signup') {
+      if (mode === 'signup' && !adminOnly) {
         await api('/auth/register-client', { method: 'POST', body: JSON.stringify({ fullName: form.name, email: form.email, companyName: form.companyName, phone: form.phone }) });
       }
+      // On the admin entry, signup only creates the Neon Auth identity.
+      // The API then verifies the allow-listed email and offers the one-time admin bootstrap.
       await onAuthenticated();
     } catch (err) { setError(err.message || 'Une erreur est survenue'); }
     finally { setBusy(false); }
@@ -58,7 +60,7 @@ function AuthScreen({ onAuthenticated, adminOnly = false }) {
     <label>Mot de passe<input required minLength="8" type="password" value={form.password} onChange={change('password')} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} /></label>
     {error && <p className="error-message" role="alert">{error}</p>}
     <button className="primary-button" disabled={busy}>{busy ? 'Veuillez patienter…' : mode === 'signin' ? 'Se connecter' : 'Créer mon compte'}</button>
-    {!adminOnly && <button type="button" className="text-button" onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(''); }}>{mode === 'signin' ? 'Créer un compte client' : 'Déjà inscrit ? Se connecter'}</button>}
+    <button type="button" className="text-button" onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(''); }}>{mode === 'signin' ? (adminOnly ? 'Créer le premier compte administrateur' : 'Créer un compte client') : 'Déjà inscrit ? Se connecter'}</button>
   </form></main>;
 }
 
