@@ -24,6 +24,7 @@ router.get('/', async (req, res, next) => {
 router.post('/', requireRole('admin', 'employee'), async (req, res, next) => {
   const { clientId, requestId = null, invoiceId = null, deliveredTo = null, deliveryDate = null, notes = null, items } = req.body ?? {};
   if (typeof clientId !== 'string' || !/^[0-9a-f-]{36}$/i.test(clientId) || !Array.isArray(items) || items.length < 1 || items.length > 50) return res.status(400).json({ error: 'Client and 1-50 delivery items are required' });
+  if (req.user.role === 'employee' && !requestId) return res.status(403).json({ error: 'Employees may only create delivery notes for requests assigned to them' });
   if (deliveryDate && !/^\d{4}-\d{2}-\d{2}$/.test(deliveryDate)) return res.status(400).json({ error: 'Invalid delivery date' });
   for (const item of items) if (typeof item.description !== 'string' || !item.description.trim() || item.description.length > 500 || !Number.isFinite(Number(item.quantity)) || Number(item.quantity) <= 0 || Number(item.quantity) > 100000) return res.status(400).json({ error: 'Invalid delivery item' });
   const client = await getPool().connect();
@@ -36,7 +37,9 @@ router.post('/', requireRole('admin', 'employee'), async (req, res, next) => {
       if (!request.rows[0]) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Request not found or not assigned to this employee' }); }
     }
     if (invoiceId) {
-      const invoice = await client.query('SELECT id FROM invoices WHERE id = $1 AND client_id = $2 AND status <> $3', [invoiceId, clientId, 'cancelled']);
+      const invoice = req.user.role === 'employee'
+        ? await client.query(`SELECT i.id FROM invoices i JOIN quotes q ON q.id = i.quote_id JOIN service_requests r ON r.id = q.request_id JOIN employees e ON e.id = r.assigned_employee_id WHERE i.id = $1 AND i.client_id = $2 AND i.status <> $3 AND r.id = $4 AND e.user_id = $5`, [invoiceId, clientId, 'cancelled', requestId, req.user.id])
+        : await client.query('SELECT id FROM invoices WHERE id = $1 AND client_id = $2 AND status <> $3', [invoiceId, clientId, 'cancelled']);
       if (!invoice.rows[0]) { await client.query('ROLLBACK'); return res.status(400).json({ error: 'Invoice does not belong to this client or is cancelled' }); }
     }
     const number = `BL-${randomUUID().slice(0, 8).toUpperCase()}`;
