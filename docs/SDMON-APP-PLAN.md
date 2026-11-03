@@ -138,6 +138,29 @@ Ce sont des propositions, pas un schéma à appliquer tel quel. Avant de créer 
 - Conservation des pièces jointes et durée de rétention.
 - Canaux WhatsApp et adresses e-mail officiels à intégrer.
 
-## 11. Première livraison non destructive
+## 11. Livraison technique initiale sur la branche de fonctionnalité
 
-La première livraison se limite à cette documentation de cadrage sur la branche `feature/sdmon-app`. Elle ne modifie aucun fichier de production, aucune configuration d'hébergement et aucune donnée métier. Les premiers changements de code seront ajoutés dans des chemins isolés, après vérification de l'arborescence complète et des workflows CI/CD.
+Les changements suivants sont maintenant présents uniquement sous `apps/` et `docs/` sur `feature/sdmon-app` :
+
+- Portail React/Vite avec tableau de bord de prévisualisation et navigation des modules.
+- API Express indépendante avec endpoint de santé, configuration PostgreSQL, vérification JWT via JWKS et middleware de rôles.
+- Schéma SQL initial proposé pour utilisateurs, employés, clients, services, demandes, devis, factures, bons de livraison, paiements manuels et journal d'audit.
+- Premiers endpoints protégés pour le tableau de bord, clients, employés, services, demandes, devis, factures, paiements et bons de livraison.
+- Contrôle d'accès des clients à leurs propres dossiers et des employés aux dossiers qui leur sont affectés.
+
+Cette livraison est du code de développement : elle n'est ni déployée ni validée en exécution. Le schéma SQL est un fichier de migration versionné, pas une migration appliquée.
+
+## 12. Résultat de l'inventaire Neon
+
+Le projet Neon nommé `sdmon.io` a été trouvé. Sa branche `production` est actuellement archivée. L'inventaire en lecture seule du schéma `neondb.public` a révélé uniquement les tables `icp` et `prospects`, qui ne correspondent pas au modèle de gestion SDMON décrit ici. Cette base ne doit donc pas être considérée comme la base de l'application métier sans confirmation du propriétaire.
+
+Aucune branche, table, donnée ou configuration Neon n'a été créée ou modifiée pendant cet inventaire. Une base/branche de développement dédiée reste à sélectionner ou à provisionner après confirmation.
+
+## 13. Points bloquants avant les essais réels
+
+- Confirmer le projet Neon à utiliser ou autoriser la création d'un projet séparé `sdmon-app-dev`.
+- Créer une branche de développement dédiée et y appliquer la migration après revue.
+- Activer/configurer Neon Managed Auth sur cette branche seulement, puis enregistrer l'URL Auth et le JWKS issuer.
+- Créer le premier compte administrateur par une procédure contrôlée; aucun rôle admin ne doit être attribué depuis une inscription publique.
+- Vérifier les endpoints et tests d'autorisation en local puis en préproduction.
+- Vérifier les paramètres Render avant tout déploiement de préproduction.
