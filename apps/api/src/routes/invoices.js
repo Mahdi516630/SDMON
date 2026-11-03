@@ -7,19 +7,25 @@ router.use(requireAuth);
 
 router.get('/', async (req, res, next) => {
   try {
-    const db = getPool();
-    const isClient = req.user.role === 'client';
-    const sql = `SELECT i.id, i.invoice_number, i.status, i.issue_date, i.due_date,
-                        i.currency, i.subtotal, i.tax_total, i.total,
-                        COALESCE(SUM(p.amount), 0)::numeric(14,2) AS amount_paid,
-                        c.contact_name, c.company_name
-                 FROM invoices i
-                 JOIN clients c ON c.id = i.client_id
-                 LEFT JOIN payments p ON p.invoice_id = i.id
-                 ${isClient ? 'WHERE c.user_id = $1' : ''}
-                 GROUP BY i.id, c.contact_name, c.company_name
-                 ORDER BY i.issue_date DESC LIMIT 200`;
-    const result = await db.query(sql, isClient ? [req.user.id] : []);
+    const role = req.user.role;
+    const where = role === 'client' ? 'WHERE c.user_id = $1'
+      : role === 'employee' ? 'WHERE e.user_id = $1' : '';
+    const result = await getPool().query(
+      `SELECT i.id, i.invoice_number, i.status, i.issue_date, i.due_date,
+              i.currency, i.subtotal, i.tax_total, i.total,
+              COALESCE(SUM(p.amount), 0)::numeric(14,2) AS amount_paid,
+              c.contact_name, c.company_name
+       FROM invoices i
+       JOIN clients c ON c.id = i.client_id
+       LEFT JOIN payments p ON p.invoice_id = i.id
+       LEFT JOIN quotes q ON q.id = i.quote_id
+       LEFT JOIN service_requests r ON r.id = q.request_id
+       LEFT JOIN employees e ON e.id = r.assigned_employee_id
+       ${where}
+       GROUP BY i.id, c.contact_name, c.company_name, e.user_id
+       ORDER BY i.issue_date DESC LIMIT 200`,
+      where ? [req.user.id] : [],
+    );
     res.json({ data: result.rows });
   } catch (error) { next(error); }
 });
