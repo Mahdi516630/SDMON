@@ -27,15 +27,38 @@ app.get('/sitemap.xml', (req, res) => {
   res.type('application/xml').sendFile(path.join(__dirname, 'sitemap.xml'));
 });
 
-// Serve static assets from root directory
+function sendNoCacheIndex(res) {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.sendFile(path.join(__dirname, 'index.html'), {
+    etag: false,
+    lastModified: false,
+    cacheControl: false,
+  });
+}
+
+// Always serve index.html uncached so updates appear immediately
+app.get(['/', '/index.html'], (req, res) => {
+  sendNoCacheIndex(res);
+});
+
+// Serve static assets from root directory without stale caching
 app.use(express.static(__dirname, {
-  maxAge: '1h',
+  maxAge: 0,
   etag: true,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  },
 }));
 
 // SPA fallback to index.html
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  sendNoCacheIndex(res);
 });
 
 app.listen(port, host, () => {
